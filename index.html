@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batubara Screener - CoalHunter</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #0d1117; color: #c9d1d9; padding: 20px; max-width: 600px; margin: 0 auto; }
+        h1 { color: #58a6ff; text-align: center; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+        .buy { border-left: 4px solid #2ea043; }
+        .sell { border-left: 4px solid #f85149; }
+        .wait { border-left: 4px solid #d29922; }
+        .price { font-size: 1.5em; font-weight: bold; margin: 10px 0; }
+        .meta { color: #8b949e; font-size: 0.9em; display: flex; justify-content: space-between; }
+        .status { font-weight: bold; padding: 2px 8px; border-radius: 4px; }
+        .loading { text-align: center; margin-top: 50px; color: #8b949e; }
+    </style>
+</head>
+<body>
+    <h1>📊 Batubara Screener</h1>
+    <div id="content"><p class="loading">Memuat data pasar...</p></div>
+    
+    <script>
+        fetch('data.json')
+            .then(r => r.json())
+            .then(data => {
+                let html = `<p style="text-align:center;color:#8b949e;font-size:0.8em">Update terakhir: ${data.updated}</p>`;
+                
+                data.stocks.forEach(s => {
+                    let cls = 'wait';
+                    if(s.status.includes('BUY')) cls = 'buy';
+                    if(s.status.includes('PROFIT')) cls = 'sell';
+                    
+                    html += `
+                    <div class="card ${cls}">
+                        <div style="display:flex;justify-content:space-between;align-items:center">
+                            <h2 style="margin:0">${s.code}</h2>
+                            <span class="status" style="background:${cls === 'buy' ? '#2ea04320' : cls === 'sell' ? '#f8514920' : '#d2992220'};color:${cls === 'buy' ? '#2ea043' : cls === 'sell' ? '#f85149' : '#d29922'}">${s.status}</span>
+                        </div>
+                        <div class="price">Rp ${s.price?.toLocaleString('id-ID') || 'N/A'}</div>
+                        <div class="meta">
+                            <span>RSI: ${s.rsi || '-'}</span>
+                            <span>${s.error || ''}</span>
+                        </div>
+                    </div>`;
+                });
+                document.getElementById('content').innerHTML = html;
+            })
+            .catch(e => document.getElementById('content').innerHTML = '<p style="text-align:center;color:#f85149">Gagal memuat data. Coba refresh nanti.</p>');
+    </script>
+</body>
+</html>
