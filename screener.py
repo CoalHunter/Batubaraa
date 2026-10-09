@@ -1,61 +1,65 @@
-# screener.py - Versi Tahan Banting
-import requests
+# screener.py - Versi yfinance (Paling Stabil)
+import yfinance as yf
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# Konfigurasi Waktu Indonesia Barat (WIB)
+wib = timezone(timedelta(hours=7))
+now_wib = datetime.now(wib).strftime("%Y-%m-%d %H:%M WIB")
 
 STOCKS = {
     "ITMG": {"buy": 22000, "sell": 30000},
     "PTBA": {"buy": 2200, "sell": 3000}
 }
 
-def get_data(code):
+def get_stock_data(ticker):
     try:
-        # Menggunakan endpoint Yahoo Finance yang lebih stabil
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.JK?interval=1d&range=5d"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        # Download data 1 bulan terakhir untuk kalkulasi RSI
+        stock = yf.Ticker(f"{ticker}.JK")
+        hist = stock.history(period="1mo")
         
-        r = requests.get(url, headers=headers, timeout=15)
-        r.raise_for_status() # Raise error jika status bukan 200
+        if hist.empty:
+            return {"code": ticker, "price": 0, "rsi": 0, "status": "ERROR: No Data"}
+
+        current_price = float(hist['Close'].iloc[-1])
         
-        data = r.json()
-        result = data['chart']['result'][0]
-        meta = result['meta']
+        # Kalkulasi RSI Manual (14 periode)
+        delta = hist['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi = float(100 - (100 / (1 + rs)).iloc[-1])
         
-        price = meta.get('regularMarketPrice', 0)
-        
-        # Hitung RSI Sederhana
-        closes = [c for c in result['indicators']['quote'][0]['close'] if c is not None]
-        rsi = 50
-        if len(closes) > 14:
-            gains = sum(max(0, closes[i]-closes[i-1]) for i in range(len(closes)-14, len(closes)))
-            losses = sum(max(0, closes[i-1]-closes[i]) for i in range(len(closes)-14, len(closes)))
-            rs = (gains/14) / (losses/14) if losses > 0 else 100
-            rsi = round(100 - (100 / (1 + rs)), 1)
-            
-        # Tentukan Status
-        status = "WAIT"
-        if price <= STOCKS[code]["buy"] * 1.1 and rsi < 40: 
+        # Logika Sinyal
+        status = "WAIT ⏳"
+        if current_price <= STOCKS[ticker]["buy"] * 1.05 and rsi < 40:
             status = "BUY ZONE 🟢"
-        elif price >= STOCKS[code]["sell"]: 
+        elif current_price >= STOCKS[ticker]["sell"]:
             status = "TAKE PROFIT 🔴"
             
-        return {"code": code, "price": price, "rsi": rsi, "status": status}
+        return {
+            "code": ticker, 
+            "price": int(current_price), 
+            "rsi": round(rsi, 1), 
+            "status": status
+        }
         
     except Exception as e:
-        print(f"Error fetching {code}: {e}")
-        return {"code": code, "price": 0, "rsi": 0, "status": f"ERROR: {str(e)[:50]}"}
+        print(f"Gagal mengambil data {ticker}: {e}")
+        return {"code": ticker, "price": 0, "rsi": 0, "status": f"ERROR: {str(e)[:30]}"}
 
-# Jalankan screening
-results = [get_data(k) for k in STOCKS.keys()]
+# --- EKSEKUSI UTAMA ---
+print("🚀 Memulai screening saham batubara...")
+results = [get_stock_data(code) for code in STOCKS.keys()]
 
-# PENTING: Pastikan file selalu tercipta meski error
-output = {
-    "updated": datetime.now().strftime("%Y-%m-%d %H:%M WIB"),
+output_data = {
+    "updated": now_wib,
     "stocks": results
 }
 
-with open("data.json", "w") as f:
-    json.dump(output, f, indent=2)
+# PENTING: Tulis ke file JSON
+with open("data.json", "w", encoding="utf-8") as f:
+    json.dump(output_data, f, indent=2, ensure_ascii=False)
 
-print("✅ Screening selesai. data.json berhasil dibuat.")
-print(json.dumps(output, indent=2))
+print("✅ Selesai! File data.json berhasil dibuat.")
+print(json.dumps(output_data, indent=2))
