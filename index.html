@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batubara Screener - CoalHunter</title>
     <style>
-        /* --- CSS DASAR & KARTU (Sama seperti sebelumnya) --- */
+        /* --- CSS DASAR & KARTU --- */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0d1117; color: #c9d1d9; padding: 20px; max-width: 600px; margin: 0 auto; }
         h1 { color: #58a6ff; text-align: center; margin-bottom: 5px; }
         .subtitle { text-align: center; color: #8b949e; font-size: 0.8em; margin-bottom: 20px; }
@@ -80,8 +80,11 @@
     <script>
         // Fungsi Format Rupiah
         const formatRp = (num) => num ? 'Rp ' + Number(num).toLocaleString('id-ID') : 'N/A';
+        
+        // PROXY CORS UNTUK MENGHINDARI BLOKIR BROWSER
+        const PROXY = "https://corsproxy.io/?";
 
-        // Load Data Utama
+        // Load Data Utama dari data.json lokal
         fetch('data.json')
             .then(r => r.json())
             .then(data => {
@@ -94,7 +97,6 @@
                     if(s.status.includes('BUY')) { cls = 'buy'; badgeColor = '#2ea04320'; badgeText = '#2ea043'; }
                     if(s.status.includes('PROFIT')) { cls = 'sell'; badgeColor = '#f8514920'; badgeText = '#f85149'; }
                     
-                    // Tambahkan onclick event untuk membuka modal
                     html += `
                     <div class="card ${cls}" onclick="openDetail('${s.code}', ${s.price}, ${s.rsi}, '${s.status}')">
                         <div class="card-header">
@@ -109,20 +111,19 @@
                 });
                 document.getElementById('content').innerHTML = html;
             })
-            .catch(e => document.getElementById('content').innerHTML = '<p style="text-align:center;color:#f85149">Gagal memuat data. Cek koneksi internet.</p>');
+            .catch(e => document.getElementById('content').innerHTML = '<p style="text-align:center;color:#f85149">Gagal memuat data dasar.</p>');
 
-        // FUNGSI BUKA DETAIL & AMBIL DATA LANJUTAN
+        // FUNGSI BUKA DETAIL DENGAN PROXY
         async function openDetail(code, price, rsi, status) {
             const modal = document.getElementById('modal');
             const body = document.getElementById('modal-body');
             
-            // Tampilkan loading state
             modal.style.display = 'flex';
             body.innerHTML = '<div class="loading-modal">Mengambil analisa mendalam & berita...<br><small>Mohon tunggu sebentar</small></div>';
 
             try {
-                // 1. Ambil Fundamental via yfinance proxy (query1)
-                const fundUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${code}.JK?modules=summaryDetail,defaultKeyStatistics,financialData`;
+                // 1. Ambil Fundamental via Proxy
+                const fundUrl = `${PROXY}https://query1.finance.yahoo.com/v10/finance/quoteSummary/${code}.JK?modules=summaryDetail,defaultKeyStatistics,financialData`;
                 const fundRes = await fetch(fundUrl);
                 const fundData = await fundRes.json();
                 
@@ -134,8 +135,8 @@
                     divYield = res.summaryDetail?.dividendYield?.fmt || '-';
                 }
 
-                // 2. Ambil Berita Terbaru
-                const newsUrl = `https://query1.finance.yahoo.com/v2/finance/news?symbol=${code}.JK&count=3`;
+                // 2. Ambil Berita Terbaru via Proxy
+                const newsUrl = `${PROXY}https://query1.finance.yahoo.com/v2/finance/news?symbol=${code}.JK&count=3`;
                 const newsRes = await fetch(newsUrl);
                 const newsData = await newsRes.json();
                 let newsHtml = '';
@@ -153,7 +154,7 @@
                     newsHtml = '<p style="color:#8b949e;font-size:0.9em">Tidak ada berita terbaru hari ini.</p>';
                 }
 
-                // 3. Generate Analisa Otomatis Berdasarkan Data
+                // 3. Generate Analisa Otomatis
                 let reason = "";
                 if(status.includes('BUY')) {
                     reason = `Harga saat ini (<b>${formatRp(price)}</b>) berada di area undervalued dekat target beli Anda. Ditambah dengan RSI <b>${rsi}</b> yang menunjukkan kondisi oversold (jenuh jual), potensi pantulan harga cukup besar. Ini adalah zona akumulasi yang baik sesuai strategi swing tahunan.`;
@@ -183,7 +184,7 @@
                     </div>
 
                     <div class="detail-section">
-                        <div class="detail-title"> Sentimen & Berita Terkini</div>
+                        <div class="detail-title">📰 Sentimen & Berita Terkini</div>
                         ${newsHtml}
                     </div>
                 `;
