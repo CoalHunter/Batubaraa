@@ -1,0 +1,17 @@
+{
+  "updated": "2026-10-09 08:27 WIB",
+  "stocks": [
+    {
+      "code": "ITMG",
+      "price": 25325,
+      "rsi": 38.3,
+      "status": "WAIT ⏳"
+    },
+    {
+      "code": "PTBA",
+      "price": 3320,
+      "rsi": 63.9,
+      "status": "TAKE PROFIT 🔴"
+    }
+  ]
+}
