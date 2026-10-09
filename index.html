@@ -5,49 +5,202 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batubara Screener - CoalHunter</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #0d1117; color: #c9d1d9; padding: 20px; max-width: 600px; margin: 0 auto; }
-        h1 { color: #58a6ff; text-align: center; }
-        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
-        .buy { border-left: 4px solid #2ea043; }
-        .sell { border-left: 4px solid #f85149; }
-        .wait { border-left: 4px solid #d29922; }
-        .price { font-size: 1.5em; font-weight: bold; margin: 10px 0; }
-        .meta { color: #8b949e; font-size: 0.9em; display: flex; justify-content: space-between; }
-        .status { font-weight: bold; padding: 2px 8px; border-radius: 4px; }
-        .loading { text-align: center; margin-top: 50px; color: #8b949e; }
+        /* --- CSS DASAR & KARTU (Sama seperti sebelumnya) --- */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0d1117; color: #c9d1d9; padding: 20px; max-width: 600px; margin: 0 auto; }
+        h1 { color: #58a6ff; text-align: center; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #8b949e; font-size: 0.8em; margin-bottom: 20px; }
+        
+        .card { 
+            background: #161b22; border: 1px solid #30363d; border-radius: 12px; 
+            padding: 20px; margin-bottom: 15px; cursor: pointer; transition: transform 0.2s, background 0.2s; 
+        }
+        .card:active { transform: scale(0.98); background: #1f242c; }
+        
+        .buy { border-left: 5px solid #2ea043; }
+        .sell { border-left: 5px solid #f85149; }
+        .wait { border-left: 5px solid #d29922; }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .ticker { font-size: 1.5em; font-weight: bold; color: #fff; }
+        .status-badge { font-size: 0.8em; font-weight: bold; padding: 4px 10px; border-radius: 20px; }
+        
+        .price { font-size: 1.8em; font-weight: bold; margin: 10px 0; color: #fff; }
+        .meta { color: #8b949e; font-size: 0.9em; display: flex; gap: 15px; }
+        
+        /* --- CSS MODAL / POPUP --- */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8); z-index: 1000; justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background: #161b22; border: 1px solid #30363d; border-radius: 16px;
+            width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto;
+            padding: 25px; position: relative; animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .close-btn {
+            position: absolute; top: 15px; right: 15px; background: none; border: none;
+            color: #8b949e; font-size: 1.5em; cursor: pointer; padding: 5px;
+        }
+        .close-btn:hover { color: #fff; }
+        
+        .detail-section { margin-top: 20px; padding-top: 15px; border-top: 1px solid #30363d; }
+        .detail-title { color: #58a6ff; font-size: 0.9em; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .info-box { background: #0d1117; padding: 10px; border-radius: 8px; }
+        .info-label { font-size: 0.75em; color: #8b949e; }
+        .info-value { font-size: 1.1em; font-weight: bold; color: #c9d1d9; margin-top: 4px; }
+        
+        .reason-text { font-size: 0.95em; line-height: 1.5; color: #c9d1d9; background: #0d1117; padding: 12px; border-radius: 8px; }
+        
+        .news-item { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #21262d; }
+        .news-item:last-child { border-bottom: none; }
+        .news-title { font-size: 0.9em; color: #58a6ff; text-decoration: none; display: block; margin-bottom: 4px; }
+        .news-title:hover { text-decoration: underline; }
+        .news-pub { font-size: 0.75em; color: #8b949e; }
+        
+        .loading-modal { text-align: center; padding: 40px; color: #8b949e; }
     </style>
 </head>
 <body>
     <h1>📊 Batubara Screener</h1>
-    <div id="content"><p class="loading">Memuat data pasar...</p></div>
+    <div id="content"><p class="subtitle">Memuat data pasar...</p></div>
+    
+    <!-- MODAL CONTAINER -->
+    <div id="modal" class="modal-overlay" onclick="if(event.target === this) closeModal()">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+            <div id="modal-body"></div>
+        </div>
+    </div>
     
     <script>
+        // Fungsi Format Rupiah
+        const formatRp = (num) => num ? 'Rp ' + Number(num).toLocaleString('id-ID') : 'N/A';
+
+        // Load Data Utama
         fetch('data.json')
             .then(r => r.json())
             .then(data => {
-                let html = `<p style="text-align:center;color:#8b949e;font-size:0.8em">Update terakhir: ${data.updated}</p>`;
+                let html = `<p class="subtitle">Update terakhir: ${data.updated}</p>`;
                 
                 data.stocks.forEach(s => {
                     let cls = 'wait';
-                    if(s.status.includes('BUY')) cls = 'buy';
-                    if(s.status.includes('PROFIT')) cls = 'sell';
+                    let badgeColor = '#d2992220'; let badgeText = '#d29922';
                     
+                    if(s.status.includes('BUY')) { cls = 'buy'; badgeColor = '#2ea04320'; badgeText = '#2ea043'; }
+                    if(s.status.includes('PROFIT')) { cls = 'sell'; badgeColor = '#f8514920'; badgeText = '#f85149'; }
+                    
+                    // Tambahkan onclick event untuk membuka modal
                     html += `
-                    <div class="card ${cls}">
-                        <div style="display:flex;justify-content:space-between;align-items:center">
-                            <h2 style="margin:0">${s.code}</h2>
-                            <span class="status" style="background:${cls === 'buy' ? '#2ea04320' : cls === 'sell' ? '#f8514920' : '#d2992220'};color:${cls === 'buy' ? '#2ea043' : cls === 'sell' ? '#f85149' : '#d29922'}">${s.status}</span>
+                    <div class="card ${cls}" onclick="openDetail('${s.code}', ${s.price}, ${s.rsi}, '${s.status}')">
+                        <div class="card-header">
+                            <span class="ticker">${s.code}</span>
+                            <span class="status-badge" style="background:${badgeColor};color:${badgeText}">${s.status}</span>
                         </div>
-                        <div class="price">Rp ${s.price?.toLocaleString('id-ID') || 'N/A'}</div>
+                        <div class="price">${formatRp(s.price)}</div>
                         <div class="meta">
-                            <span>RSI: ${s.rsi || '-'}</span>
-                            <span>${s.error || ''}</span>
+                            <span>RSI (14): ${s.rsi}</span>
                         </div>
                     </div>`;
                 });
                 document.getElementById('content').innerHTML = html;
             })
-            .catch(e => document.getElementById('content').innerHTML = '<p style="text-align:center;color:#f85149">Gagal memuat data. Coba refresh nanti.</p>');
+            .catch(e => document.getElementById('content').innerHTML = '<p style="text-align:center;color:#f85149">Gagal memuat data. Cek koneksi internet.</p>');
+
+        // FUNGSI BUKA DETAIL & AMBIL DATA LANJUTAN
+        async function openDetail(code, price, rsi, status) {
+            const modal = document.getElementById('modal');
+            const body = document.getElementById('modal-body');
+            
+            // Tampilkan loading state
+            modal.style.display = 'flex';
+            body.innerHTML = '<div class="loading-modal">Mengambil analisa mendalam & berita...<br><small>Mohon tunggu sebentar</small></div>';
+
+            try {
+                // 1. Ambil Fundamental via yfinance proxy (query1)
+                const fundUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${code}.JK?modules=summaryDetail,defaultKeyStatistics,financialData`;
+                const fundRes = await fetch(fundUrl);
+                const fundData = await fundRes.json();
+                
+                let per = '-', pbv = '-', divYield = '-';
+                if(fundData.quoteSummary && fundData.quoteSummary.result) {
+                    const res = fundData.quoteSummary.result[0];
+                    per = res.summaryDetail?.trailingPE?.fmt || '-';
+                    pbv = res.defaultKeyStatistics?.priceToBook?.fmt || '-';
+                    divYield = res.summaryDetail?.dividendYield?.fmt || '-';
+                }
+
+                // 2. Ambil Berita Terbaru
+                const newsUrl = `https://query1.finance.yahoo.com/v2/finance/news?symbol=${code}.JK&count=3`;
+                const newsRes = await fetch(newsUrl);
+                const newsData = await newsRes.json();
+                let newsHtml = '';
+                
+                if(newsData.news && newsData.news.length > 0) {
+                    newsData.news.slice(0, 3).forEach(n => {
+                        const date = new Date(n.providerPublishTime * 1000).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'});
+                        newsHtml += `
+                        <div class="news-item">
+                            <a href="${n.link}" target="_blank" class="news-title">${n.title}</a>
+                            <span class="news-pub">${n.publisher} • ${date}</span>
+                        </div>`;
+                    });
+                } else {
+                    newsHtml = '<p style="color:#8b949e;font-size:0.9em">Tidak ada berita terbaru hari ini.</p>';
+                }
+
+                // 3. Generate Analisa Otomatis Berdasarkan Data
+                let reason = "";
+                if(status.includes('BUY')) {
+                    reason = `Harga saat ini (<b>${formatRp(price)}</b>) berada di area undervalued dekat target beli Anda. Ditambah dengan RSI <b>${rsi}</b> yang menunjukkan kondisi oversold (jenuh jual), potensi pantulan harga cukup besar. Ini adalah zona akumulasi yang baik sesuai strategi swing tahunan.`;
+                } else if(status.includes('PROFIT')) {
+                    reason = `Harga telah melampaui target jual (<b>${formatRp(price)}</b>). Dengan RSI di level <b>${rsi}</b>, saham mungkin mulai overbought. Disarankan untuk merealisasikan keuntungan atau melakukan trailing stop loss untuk mengamankan profit.`;
+                } else {
+                    reason = `Harga saat ini (<b>${formatRp(price)}</b>) masih berada di antara target beli dan jual. RSI <b>${rsi}</b> menunjukkan momentum netral. Strategi terbaik saat ini adalah WAIT: tetap pantau pergerakan harga dan tunggu hingga masuk ke zona BUY atau TAKE PROFIT.`;
+                }
+
+                // Render ke Modal
+                body.innerHTML = `
+                    <h2 style="margin:0 0 5px 0; color:#fff">${code}</h2>
+                    <p style="margin:0 0 20px 0; color:#8b949e; font-size:0.9em">Analisa Mendalam & Sentimen Pasar</p>
+                    
+                    <div class="info-grid">
+                        <div class="info-box"><div class="info-label">Harga Terakhir</div><div class="info-value">${formatRp(price)}</div></div>
+                        <div class="info-box"><div class="info-label">RSI (14)</div><div class="info-value">${rsi}</div></div>
+                        <div class="info-box"><div class="info-label">PER (Trailing)</div><div class="info-value">${per}</div></div>
+                        <div class="info-box"><div class="info-label">PBV</div><div class="info-value">${pbv}</div></div>
+                        <div class="info-box"><div class="info-label">Dividend Yield</div><div class="info-value">${divYield}</div></div>
+                        <div class="info-box"><div class="info-label">Status Sinyal</div><div class="info-value" style="color:${status.includes('BUY')?'#2ea043':status.includes('PROFIT')?'#f85149':'#d29922'}">${status}</div></div>
+                    </div>
+
+                    <div class="detail-section">
+                        <div class="detail-title">💡 Kenapa Rekomendasi Ini?</div>
+                        <div class="reason-text">${reason}</div>
+                    </div>
+
+                    <div class="detail-section">
+                        <div class="detail-title"> Sentimen & Berita Terkini</div>
+                        ${newsHtml}
+                    </div>
+                `;
+
+            } catch (err) {
+                console.error(err);
+                body.innerHTML = `
+                    <h2 style="color:#fff">${code}</h2>
+                    <p style="color:#f85149">Gagal mengambil data detail. Pastikan koneksi internet lancar.</p>
+                    <p style="font-size:0.8em; color:#8b949e">Error: ${err.message}</p>
+                `;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
     </script>
 </body>
 </html>
