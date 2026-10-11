@@ -1,35 +1,18 @@
-name: Daily Stock Screening
-
-on:
-  schedule:
-    - cron: '0 1 * * 1-5' # Senin-Jumat 08:00 WIB
-  workflow_dispatch:
-
-jobs:
-  screen:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-          
-      - name: Install dependencies
-        run: |
-          pip install yfinance
-          
-      - name: Run Screener
-        run: python screener.py
-        
-      - name: Commit & Push Results
+- name: Commit & Push Results
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Gunakan token untuk autentikasi
           git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/CoalHunter/Batubaraa.git
           
           git add data.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update: $(date '+%Y-%m-%d')" && git push origin main)
+          
+          # Commit dengan pesan dinamis
+          git commit -m "Auto-update: $(date '+%Y-%m-%d %H:%M WIB')" || echo "No changes to commit"
+          
+          # PENTING: Tarik dulu perubahan terbaru dari remote, lalu gabungkan
+          git pull --rebase origin main || true
+          
+          # Baru push setelah sinkron
+          git push origin main
