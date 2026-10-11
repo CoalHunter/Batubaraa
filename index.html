@@ -6,7 +6,10 @@
     <title>Batubara Screener - CoalHunter</title>
     <style>
         /* --- CSS DASAR & KARTU --- */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0d1117; color: #c9d1d9; padding: 20px; max-width: 600px; margin: 0 auto; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: #0d1117; color: #c9d1d9; padding: 20px; max-width: 600px; margin: 0 auto; 
+        }
         h1 { color: #58a6ff; text-align: center; margin-bottom: 5px; }
         .subtitle { text-align: center; color: #8b949e; font-size: 0.8em; margin-bottom: 20px; }
         
@@ -16,6 +19,7 @@
         }
         .card:active { transform: scale(0.98); background: #1f242c; }
         
+        /* Warna Border Status */
         .buy { border-left: 5px solid #2ea043; }
         .sell { border-left: 5px solid #f85149; }
         .wait { border-left: 5px solid #d29922; }
@@ -97,15 +101,18 @@
                     if(s.status.includes('BUY')) { cls = 'buy'; badgeColor = '#2ea04320'; badgeText = '#2ea043'; }
                     if(s.status.includes('PROFIT')) { cls = 'sell'; badgeColor = '#f8514920'; badgeText = '#f85149'; }
                     
+                    // Menampilkan PBV di kartu utama sebagai indikator valuasi
+                    let pbvDisplay = s.pbv ? ` | PBV: ${s.pbv}x` : '';
+                    
                     html += `
-                    <div class="card ${cls}" onclick="openDetail('${s.code}', ${s.price}, ${s.rsi}, '${s.status}')">
+                    <div class="card ${cls}" onclick="openDetail('${s.code}', ${s.price}, ${s.rsi}, '${s.status}', ${s.pbv || 0}, ${s.per || 0}, ${s.div_yield || 0}, '${s.reason || ''}')">
                         <div class="card-header">
                             <span class="ticker">${s.code}</span>
                             <span class="status-badge" style="background:${badgeColor};color:${badgeText}">${s.status}</span>
                         </div>
                         <div class="price">${formatRp(s.price)}</div>
                         <div class="meta">
-                            <span>RSI (14): ${s.rsi}</span>
+                            <span>RSI: ${s.rsi}${pbvDisplay}</span>
                         </div>
                     </div>`;
                 });
@@ -114,28 +121,15 @@
             .catch(e => document.getElementById('content').innerHTML = '<p style="text-align:center;color:#f85149">Gagal memuat data dasar.</p>');
 
         // FUNGSI BUKA DETAIL DENGAN PROXY
-        async function openDetail(code, price, rsi, status) {
+        async function openDetail(code, price, rsi, status, pbv, per, divYield, reason) {
             const modal = document.getElementById('modal');
             const body = document.getElementById('modal-body');
             
             modal.style.display = 'flex';
-            body.innerHTML = '<div class="loading-modal">Mengambil analisa mendalam & berita...<br><small>Mohon tunggu sebentar</small></div>';
+            body.innerHTML = '<div class="loading-modal">Mengambil berita terkini...<br><small>Mohon tunggu sebentar</small></div>';
 
             try {
-                // 1. Ambil Fundamental via Proxy
-                const fundUrl = `${PROXY}https://query1.finance.yahoo.com/v10/finance/quoteSummary/${code}.JK?modules=summaryDetail,defaultKeyStatistics,financialData`;
-                const fundRes = await fetch(fundUrl);
-                const fundData = await fundRes.json();
-                
-                let per = '-', pbv = '-', divYield = '-';
-                if(fundData.quoteSummary && fundData.quoteSummary.result) {
-                    const res = fundData.quoteSummary.result[0];
-                    per = res.summaryDetail?.trailingPE?.fmt || '-';
-                    pbv = res.defaultKeyStatistics?.priceToBook?.fmt || '-';
-                    divYield = res.summaryDetail?.dividendYield?.fmt || '-';
-                }
-
-                // 2. Ambil Berita Terbaru via Proxy
+                // Ambil Berita Terbaru via Proxy
                 const newsUrl = `${PROXY}https://query1.finance.yahoo.com/v2/finance/news?symbol=${code}.JK&count=3`;
                 const newsRes = await fetch(newsUrl);
                 const newsData = await newsRes.json();
@@ -154,32 +148,22 @@
                     newsHtml = '<p style="color:#8b949e;font-size:0.9em">Tidak ada berita terbaru hari ini.</p>';
                 }
 
-                // 3. Generate Analisa Otomatis
-                let reason = "";
-                if(status.includes('BUY')) {
-                    reason = `Harga saat ini (<b>${formatRp(price)}</b>) berada di area undervalued dekat target beli Anda. Ditambah dengan RSI <b>${rsi}</b> yang menunjukkan kondisi oversold (jenuh jual), potensi pantulan harga cukup besar. Ini adalah zona akumulasi yang baik sesuai strategi swing tahunan.`;
-                } else if(status.includes('PROFIT')) {
-                    reason = `Harga telah melampaui target jual (<b>${formatRp(price)}</b>). Dengan RSI di level <b>${rsi}</b>, saham mungkin mulai overbought. Disarankan untuk merealisasikan keuntungan atau melakukan trailing stop loss untuk mengamankan profit.`;
-                } else {
-                    reason = `Harga saat ini (<b>${formatRp(price)}</b>) masih berada di antara target beli dan jual. RSI <b>${rsi}</b> menunjukkan momentum netral. Strategi terbaik saat ini adalah WAIT: tetap pantau pergerakan harga dan tunggu hingga masuk ke zona BUY atau TAKE PROFIT.`;
-                }
-
-                // Render ke Modal
+                // Render ke Modal dengan Data Valuasi Dinamis
                 body.innerHTML = `
                     <h2 style="margin:0 0 5px 0; color:#fff">${code}</h2>
-                    <p style="margin:0 0 20px 0; color:#8b949e; font-size:0.9em">Analisa Mendalam & Sentimen Pasar</p>
+                    <p style="margin:0 0 20px 0; color:#8b949e; font-size:0.9em">Analisa Valuasi & Sentimen</p>
                     
                     <div class="info-grid">
-                        <div class="info-box"><div class="info-label">Harga Terakhir</div><div class="info-value">${formatRp(price)}</div></div>
-                        <div class="info-box"><div class="info-label">RSI (14)</div><div class="info-value">${rsi}</div></div>
+                        <div class="info-box"><div class="info-label">Harga Saham</div><div class="info-value">${formatRp(price)}</div></div>
+                        <div class="info-box"><div class="info-label">PBV (Price/Book)</div><div class="info-value">${pbv}x</div></div>
                         <div class="info-box"><div class="info-label">PER (Trailing)</div><div class="info-value">${per}</div></div>
-                        <div class="info-box"><div class="info-label">PBV</div><div class="info-value">${pbv}</div></div>
-                        <div class="info-box"><div class="info-label">Dividend Yield</div><div class="info-value">${divYield}</div></div>
+                        <div class="info-box"><div class="info-label">Dividend Yield</div><div class="info-value">${divYield}%</div></div>
+                        <div class="info-box"><div class="info-label">RSI (14)</div><div class="info-value">${rsi}</div></div>
                         <div class="info-box"><div class="info-label">Status Sinyal</div><div class="info-value" style="color:${status.includes('BUY')?'#2ea043':status.includes('PROFIT')?'#f85149':'#d29922'}">${status}</div></div>
                     </div>
 
                     <div class="detail-section">
-                        <div class="detail-title">💡 Kenapa Rekomendasi Ini?</div>
+                        <div class="detail-title">💡 Analisa Siklus & Valuasi</div>
                         <div class="reason-text">${reason}</div>
                     </div>
 
@@ -193,7 +177,7 @@
                 console.error(err);
                 body.innerHTML = `
                     <h2 style="color:#fff">${code}</h2>
-                    <p style="color:#f85149">Gagal mengambil data detail. Pastikan koneksi internet lancar.</p>
+                    <p style="color:#f85149">Gagal mengambil berita. Cek koneksi internet.</p>
                     <p style="font-size:0.8em; color:#8b949e">Error: ${err.message}</p>
                 `;
             }
