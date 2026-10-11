@@ -5,47 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batubara Screener - CoalHunter</title>
     <style>
-        /* --- CSS SAMA SEPERTI SEBELUMNYA (TIDAK BERUBAH) --- */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0d1117; color: #c9d1d9; padding: 20px; max-width: 600px; margin: 0 auto; }
-        h1 { color: #58a6ff; text-align: center; margin-bottom: 5px; }
+        body { font-family: -apple-system, sans-serif; background: #0d1117; color: #c9d1d9; padding: 20px; max-width: 600px; margin: 0 auto; }
+        h1 { color: #58a6ff; text-align: center; }
         .subtitle { text-align: center; color: #8b949e; font-size: 0.8em; margin-bottom: 20px; }
-        
-        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px; margin-bottom: 15px; cursor: pointer; transition: transform 0.2s, background 0.2s; }
-        .card:active { transform: scale(0.98); background: #1f242c; }
-        .buy { border-left: 5px solid #2ea043; }
-        .sell { border-left: 5px solid #f85149; }
-        .wait { border-left: 5px solid #d29922; }
-        
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px; margin-bottom: 15px; cursor: pointer; }
+        .buy { border-left: 5px solid #2ea043; } .sell { border-left: 5px solid #f85149; } .wait { border-left: 5px solid #d29922; }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .ticker { font-size: 1.5em; font-weight: bold; color: #fff; }
-        .status-badge { font-size: 0.8em; font-weight: bold; padding: 4px 10px; border-radius: 20px; }
-        .price { font-size: 1.8em; font-weight: bold; margin: 10px 0; color: #fff; }
-        .meta { color: #8b949e; font-size: 0.9em; display: flex; gap: 15px; }
+        .ticker { font-size: 1.5em; font-weight: bold; }
+        .price { font-size: 1.8em; font-weight: bold; margin: 10px 0; }
+        .meta { color: #8b949e; font-size: 0.9em; }
         
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
-        .modal-content { background: #161b22; border: 1px solid #30363d; border-radius: 16px; width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto; padding: 25px; position: relative; animation: slideUp 0.3s ease-out; }
+        /* Modal Styles */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal-content { background: #161b22; border: 1px solid #30363d; border-radius: 16px; width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto; padding: 25px; position: relative; animation: slideUp 0.3s; }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #8b949e; font-size: 1.5em; cursor: pointer; padding: 5px; }
-        .close-btn:hover { color: #fff; }
+        .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #8b949e; font-size: 1.5em; cursor: pointer; }
         
-        .detail-section { margin-top: 20px; padding-top: 15px; border-top: 1px solid #30363d; }
-        .detail-title { color: #58a6ff; font-size: 0.9em; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
         .info-box { background: #0d1117; padding: 10px; border-radius: 8px; }
         .info-label { font-size: 0.75em; color: #8b949e; }
-        .info-value { font-size: 1.1em; font-weight: bold; color: #c9d1d9; margin-top: 4px; }
-        .reason-text { font-size: 0.95em; line-height: 1.5; color: #c9d1d9; background: #0d1117; padding: 12px; border-radius: 8px; }
+        .info-value { font-size: 1.1em; font-weight: bold; margin-top: 4px; }
+        
+        .detail-section { margin-top: 20px; padding-top: 15px; border-top: 1px solid #30363d; }
+        .detail-title { color: #58a6ff; font-size: 0.9em; font-weight: bold; margin-bottom: 10px; }
+        .reason-text { font-size: 0.95em; line-height: 1.5; background: #0d1117; padding: 12px; border-radius: 8px; }
+        
         .news-item { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #21262d; }
-        .news-item:last-child { border-bottom: none; }
-        .news-title { font-size: 0.9em; color: #58a6ff; text-decoration: none; display: block; margin-bottom: 4px; }
-        .news-title:hover { text-decoration: underline; }
+        .news-title { color: #58a6ff; text-decoration: none; display: block; margin-bottom: 4px; font-size: 0.9em; }
         .news-pub { font-size: 0.75em; color: #8b949e; }
-        .loading-modal { text-align: center; padding: 40px; color: #8b949e; }
     </style>
 </head>
 <body>
     <h1>📊 Batubara Screener</h1>
-    <div id="content"><p class="subtitle">Memuat data pasar...</p></div>
+    <div id="content"><p class="subtitle">Memuat data...</p></div>
     
     <div id="modal" class="modal-overlay" onclick="if(event.target === this) closeModal()">
         <div class="modal-content">
@@ -53,149 +45,74 @@
             <div id="modal-body"></div>
         </div>
     </div>
-    
+
     <script>
         const formatRp = (num) => num ? 'Rp ' + Number(num).toLocaleString('id-ID') : 'N/A';
         const PROXY = "https://corsproxy.io/?";
 
-        // FUNGSI PEMBANTU UNTUK MENGAMBIL DATA DENGAN AMAN (CASE INSENSITIVE)
-        function getSafeValue(obj, key, fallback = '-') {
-            if (!obj) return fallback;
-            // Coba cari kunci persis
-            if (obj[key] !== undefined && obj[key] !== null) return obj[key];
-            
-            // Jika tidak ketemu, cari kunci yang mirip (huruf besar/kecil tidak masalah)
-            const lowerKey = key.toLowerCase();
-            for (let k in obj) {
-                if (k.toLowerCase() === lowerKey) return obj[k];
-            }
-            return fallback;
-        }
-
         fetch('data.json')
             .then(r => r.json())
             .then(data => {
-                let html = `<p class="subtitle">Update terakhir: ${data.updated}</p>`;
-                
+                let html = `<p class="subtitle">Update: ${data.updated}</p>`;
                 data.stocks.forEach(s => {
-                    let cls = 'wait';
-                    let badgeColor = '#d2992220'; let badgeText = '#d29922';
+                    let cls = s.status.includes('BUY') ? 'buy' : s.status.includes('PROFIT') ? 'sell' : 'wait';
+                    let badgeColor = s.status.includes('BUY') ? '#2ea043' : s.status.includes('PROFIT') ? '#f85149' : '#d29922';
                     
-                    // Deteksi status dengan aman
-                    const statusStr = String(getSafeValue(s, 'status', 'WAIT')).toUpperCase();
-                    if(statusStr.includes('BUY')) { cls = 'buy'; badgeColor = '#2ea04320'; badgeText = '#2ea043'; }
-                    if(statusStr.includes('PROFIT')) { cls = 'sell'; badgeColor = '#f8514920'; badgeText = '#f85149'; }
-                    
-                    // Ambil data dengan aman
-                    const price = getSafeValue(s, 'price', 0);
-                    const rsi = getSafeValue(s, 'rsi', 0);
-                    const pbv = getSafeValue(s, 'pbv', 0);
-                    const code = getSafeValue(s, 'code', 'SAHAM');
-                    
-                    // Tampilkan PBV di kartu jika ada
-                    let pbvDisplay = (pbv && pbv > 0) ? ` | PBV: ${pbv}x` : '';
-                    
-                    html += `
-                    <div class="card ${cls}" onclick='openDetail(${JSON.stringify(s)})'>
-                        <div class="card-header">
-                            <span class="ticker">${code}</span>
-                            <span class="status-badge" style="background:${badgeColor};color:${badgeText}">${statusStr}</span>
-                        </div>
-                        <div class="price">${formatRp(price)}</div>
-                        <div class="meta">
-                            <span>RSI: ${rsi}${pbvDisplay}</span>
-                        </div>
+                    // Passing data ke fungsi openDetail
+                    html += `<div class="card ${cls}" onclick="openDetail('${s.code}', ${s.price}, ${s.rsi}, '${s.status}', ${s.pbv}, ${s.per}, ${s.div_yield}, \`${s.reason || 'Data analisa belum tersedia'}\`)">
+                        <div class="card-header"><span class="ticker">${s.code}</span><span style="color:${badgeColor};font-weight:bold">${s.status}</span></div>
+                        <div class="price">${formatRp(s.price)}</div>
+                        <div class="meta">RSI: ${s.rsi} | PBV: ${s.pbv}x</div>
                     </div>`;
                 });
                 document.getElementById('content').innerHTML = html;
             })
-            .catch(e => document.getElementById('content').innerHTML = '<p style="text-align:center;color:#f85149">Gagal memuat data dasar.</p>');
+            .catch(e => document.getElementById('content').innerHTML = '<p style="text-align:center;color:red">Gagal muat data.json</p>');
 
-        async function openDetail(stockData) {
+        async function openDetail(code, price, rsi, status, pbv, per, divYield, reason) {
             const modal = document.getElementById('modal');
             const body = document.getElementById('modal-body');
-            
             modal.style.display = 'flex';
-            body.innerHTML = '<div class="loading-modal">Mengambil berita terkini...<br><small>Mohon tunggu sebentar</small></div>';
-
-            // Ekstrak data dengan aman
-            const code = getSafeValue(stockData, 'code');
-            const price = getSafeValue(stockData, 'price', 0);
-            const rsi = getSafeValue(stockData, 'rsi', 0);
-            const status = getSafeValue(stockData, 'status', 'WAIT');
-            const pbv = getSafeValue(stockData, 'pbv', 0);
-            const per = getSafeValue(stockData, 'per', 0);
-            const divYield = getSafeValue(stockData, 'div_yield', 0);
-            let reason = getSafeValue(stockData, 'reason', '');
-
-            // Jika alasan dari Python kosong, buat alasan otomatis berdasarkan data yang ada
-            if (!reason || reason === '-' || reason === '') {
-                if (status.toUpperCase().includes('BUY')) {
-                    reason = `Harga saat ini (${formatRp(price)}) berada di area undervalued. RSI ${rsi} menunjukkan kondisi jenuh jual. Potensi pantulan harga cukup besar sesuai strategi swing.`;
-                } else if (status.toUpperCase().includes('PROFIT')) {
-                    reason = `Harga telah melampaui target (${formatRp(price)}). RSI di level ${rsi}. Disarankan merealisasikan keuntungan atau trailing stop loss.`;
-                } else {
-                    reason = `Harga (${formatRp(price)}) masih di antara target beli dan jual. RSI ${rsi} menunjukkan momentum netral. Strategi terbaik adalah WAIT.`;
-                }
-            }
+            body.innerHTML = '<p style="text-align:center;padding:40px">Memuat berita...</p>';
 
             try {
-                // Ambil Berita via Proxy
-                const newsUrl = `${PROXY}https://query1.finance.yahoo.com/v2/finance/news?symbol=${code}.JK&count=3`;
-                const newsRes = await fetch(newsUrl);
+                // Fetch Berita via Proxy
+                const newsRes = await fetch(`${PROXY}https://query1.finance.yahoo.com/v2/finance/news?symbol=${code}.JK&count=3`);
                 const newsData = await newsRes.json();
                 let newsHtml = '';
-                
                 if(newsData.news && newsData.news.length > 0) {
-                    newsData.news.slice(0, 3).forEach(n => {
-                        const date = new Date(n.providerPublishTime * 1000).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'});
-                        newsHtml += `
-                        <div class="news-item">
-                            <a href="${n.link}" target="_blank" class="news-title">${n.title}</a>
-                            <span class="news-pub">${n.publisher} • ${date}</span>
-                        </div>`;
+                    newsData.news.slice(0,3).forEach(n => {
+                        const d = new Date(n.providerPublishTime*1000).toLocaleDateString('id-ID');
+                        newsHtml += `<div class="news-item"><a href="${n.link}" target="_blank" class="news-title">${n.title}</a><span class="news-pub">${n.publisher} • ${d}</span></div>`;
                     });
-                } else {
-                    newsHtml = '<p style="color:#8b949e;font-size:0.9em">Tidak ada berita terbaru hari ini.</p>';
-                }
+                } else { newsHtml = '<p style="color:#8b949e">Tidak ada berita terbaru.</p>'; }
 
                 // Render Modal
                 body.innerHTML = `
-                    <h2 style="margin:0 0 5px 0; color:#fff">${code}</h2>
-                    <p style="margin:0 0 20px 0; color:#8b949e; font-size:0.9em">Analisa Valuasi & Sentimen</p>
-                    
+                    <h2 style="margin:0">${code}</h2>
+                    <p style="color:#8b949e;font-size:0.9em;margin-top:5px">Analisa Valuasi & Sentimen</p>
                     <div class="info-grid">
-                        <div class="info-box"><div class="info-label">Harga Saham</div><div class="info-value">${formatRp(price)}</div></div>
-                        <div class="info-box"><div class="info-label">PBV (Price/Book)</div><div class="info-value">${pbv}x</div></div>
-                        <div class="info-box"><div class="info-label">PER (Trailing)</div><div class="info-value">${per}</div></div>
-                        <div class="info-box"><div class="info-label">Dividend Yield</div><div class="info-value">${divYield}%</div></div>
-                        <div class="info-box"><div class="info-label">RSI (14)</div><div class="info-value">${rsi}</div></div>
-                        <div class="info-box"><div class="info-label">Status Sinyal</div><div class="info-value" style="color:${status.includes('BUY')?'#2ea043':status.includes('PROFIT')?'#f85149':'#d29922'}">${status}</div></div>
+                        <div class="info-box"><div class="info-label">Harga</div><div class="info-value">${formatRp(price)}</div></div>
+                        <div class="info-box"><div class="info-label">PBV</div><div class="info-value">${pbv}x</div></div>
+                        <div class="info-box"><div class="info-label">PER</div><div class="info-value">${per}</div></div>
+                        <div class="info-box"><div class="info-label">Div Yield</div><div class="info-value">${divYield}%</div></div>
+                        <div class="info-box"><div class="info-label">RSI</div><div class="info-value">${rsi}</div></div>
+                        <div class="info-box"><div class="info-label">Status</div><div class="info-value" style="color:${status.includes('BUY')?'#2ea043':'#d29922'}">${status}</div></div>
                     </div>
-
                     <div class="detail-section">
-                        <div class="detail-title">💡 Analisa Siklus & Valuasi</div>
+                        <div class="detail-title">💡 ANALISA SIKLUS & VALUASI</div>
                         <div class="reason-text">${reason}</div>
                     </div>
-
                     <div class="detail-section">
-                        <div class="detail-title">📰 Sentimen & Berita Terkini</div>
+                        <div class="detail-title">📰 BERITA TERKINI</div>
                         ${newsHtml}
                     </div>
                 `;
-
-            } catch (err) {
-                console.error(err);
-                body.innerHTML = `
-                    <h2 style="color:#fff">${code}</h2>
-                    <p style="color:#f85149">Gagal mengambil berita. Cek koneksi internet.</p>
-                `;
+            } catch(e) {
+                body.innerHTML = `<h2>${code}</h2><p style="color:red">Gagal memuat detail.</p>`;
             }
         }
-
-        function closeModal() {
-            document.getElementById('modal').style.display = 'none';
-        }
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
     </script>
 </body>
 </html>
