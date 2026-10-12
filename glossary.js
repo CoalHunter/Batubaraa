@@ -1,4 +1,4 @@
-// glossary.js - Kamus Istilah Saham untuk WPscanner
+// glossary.js - Kamus Istilah Saham untuk WPscanner v4.2
 // Dipanggil oleh app.js untuk menampilkan tooltip edukasi
 
 const GLOSSARY = {
@@ -92,7 +92,7 @@ const GLOSSARY = {
         full: "Debt to Equity Ratio",
         id: "Rasio Utang terhadap Ekuitas",
         desc: "Mengukur seberapa besar perusahaan dibiayai oleh utang dibandingkan modal sendiri. DER tinggi = risiko finansial lebih besar.",
-        how: "Rumus: Total Utang ÷ Total Ekuitas",
+        how: "Rumus: Total Utang  Total Ekuitas",
         guide: "DER < 50% = Sangat Aman | 50-100% = Aman | 100-150% = Waspada | > 150% = Berisiko Tinggi",
         note: "Pengecualian: Sektor perbankan WAJIB memiliki DER tinggi karena dana nasabah dicatat sebagai utang."
     },
@@ -111,7 +111,7 @@ const GLOSSARY = {
         full: "Pertumbuhan Laba",
         id: "Persentase Kenaikan/Turunan Laba Tahunan",
         desc: "Seberapa cepat laba perusahaan tumbuh (atau menyusut) dibandingkan tahun sebelumnya. Indikator kesehatan bisnis.",
-        how: "Rumus: ((Laba Tahun Ini - Laba Tahun Lalu)  Laba Tahun Lalu) × 100%",
+        how: "Rumus: ((Laba Tahun Ini - Laba Tahun Lalu) ÷ Laba Tahun Lalu) × 100%",
         guide: "> 15% = Tumbuh Cepat | 5-15% = Tumbuh Stabil | 0-5% = Stagnan | Negatif = Menurun"
     },
 
@@ -190,20 +190,20 @@ function getTooltipHTML(key) {
     const item = GLOSSARY[key];
     if (!item) return '';
     
-    let html = `<b>${item.term}</b> <span style="opacity:0.8;font-size:0.75rem;">(${item.full})</span><br>`;
-    html += `<i style="font-size:0.75rem;">${item.id}</i><br><br>`;
-    html += `${item.desc}<br><br>`;
+    let html = `<b>${item.term}</b> <span style="opacity:0.7;font-size:0.72rem;">(${item.full})</span><br>`;
+    html += `<i style="font-size:0.72rem;color:#ffd700;">${item.id}</i><br><br>`;
+    html += `<span style="font-size:0.75rem;">${item.desc}</span><br><br>`;
     
     if (item.how) {
-        html += `<b style="color:#ffd700;">📐 Cara Hitung:</b><br>${item.how}<br><br>`;
+        html += `<b style="color:#90ee90;font-size:0.75rem;">📐 Cara Hitung:</b><br><span style="font-size:0.72rem;">${item.how}</span><br><br>`;
     }
     
     if (item.guide) {
-        html += `<b style="color:#90ee90;">📊 Panduan:</b><br>${item.guide}`;
+        html += `<b style="color:#87ceeb;font-size:0.75rem;">📊 Panduan:</b><br><span style="font-size:0.72rem;">${item.guide}</span>`;
     }
     
     if (item.note) {
-        html += `<br><br><i style="color:#ffa500;font-size:0.75rem;">⚠️ ${item.note}</i>`;
+        html += `<br><br><i style="color:#ffa500;font-size:0.7rem;">⚠️ ${item.note}</i>`;
     }
     
     return html;
