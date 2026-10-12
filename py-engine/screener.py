@@ -4,13 +4,12 @@ import os
 import json
 from datetime import datetime
 
-# === 1. MEKANISME FAIL-FAST ===
 try:
     from tickers import TICKERS
     if not TICKERS or len(TICKERS) == 0:
         raise ValueError("Daftar TICKERS kosong.")
 except ImportError as e:
-    print(f"❌ BATAL: File 'tickers.py' tidak ditemukan.\nDetail: {e}")
+    print(f" BATAL: File 'tickers.py' tidak ditemukan.\nDetail: {e}")
     sys.exit(1)
 except Exception as e:
     print(f"❌ BATAL: Error membaca ticker.\nDetail: {e}")
@@ -94,30 +93,39 @@ def analyze_stock(ticker):
         capital_gain_potential = round((max_upside - 1) * 100, 1)
         stop_loss = round(current_price * 0.85, 2)
 
-        # Filter Utama
-        if (
-            (pbv < 0.9) and (dy >= 0.05) and (0.20 <= payout_ratio <= 0.85) and
-            (earnings_growth > -0.10) and (der < 100) and (is_in_accumulation_zone) and
-            (volume_expansion_weekly) and (is_consistent)
-        ):
-            return {
-                "ticker": ticker.replace('.JK', ''),
-                "name": info.get('shortName', ticker),
-                "price": round(current_price, 2),
-                "pbv": round(pbv, 2),
-                "per": round(per, 2),
-                "dividend_yield": round(dy * 100, 2),
-                "payout_ratio": round(payout_ratio * 100, 1),
-                "category": "Deep Value & Re-rating",
-                "buy_zone": round(current_price * 0.95, 2),
-                "target_sell": target_price,
-                "capital_gain_potential": capital_gain_potential,
-                "stop_loss": stop_loss,
-                "accumulation_signal": True,
-                "div_history": div_history,
-                "exit_rule": f"Jual bertahap saat harga mendekati Rp {target_price:,} (PBV {target_pbv}x) atau jika fundamental rusak.",
-                "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }
+        # Cek semua filter dan kumpulkan alasan jika gagal
+        reasons = []
+        if pbv >= 0.9: reasons.append("PBV ≥ 0.9x")
+        if dy < 0.05: reasons.append("Dividen < 5%")
+        if not (0.20 <= payout_ratio <= 0.85): reasons.append("Payout Ratio tidak ideal")
+        if earnings_growth <= -0.10: reasons.append("Laba anjlok")
+        if der >= 100: reasons.append("Utang tinggi")
+        if not is_in_accumulation_zone: reasons.append("Belum di area akumulasi")
+        if not volume_expansion_weekly: reasons.append("Volume belum ekspansi")
+        if not is_consistent: reasons.append("Dividen tidak konsisten")
+
+        is_recommended = len(reasons) == 0
+
+        return {
+            "ticker": ticker.replace('.JK', ''),
+            "name": info.get('shortName', ticker),
+            "price": round(current_price, 2),
+            "pbv": round(pbv, 2),
+            "per": round(per, 2),
+            "dividend_yield": round(dy * 100, 2),
+            "payout_ratio": round(payout_ratio * 100, 1),
+            "category": "Deep Value & Re-rating",
+            "buy_zone": round(current_price * 0.95, 2),
+            "target_sell": target_price,
+            "capital_gain_potential": capital_gain_potential,
+            "stop_loss": stop_loss,
+            "accumulation_signal": is_in_accumulation_zone and volume_expansion_weekly,
+            "div_history": div_history,
+            "exit_rule": f"Jual bertahap saat harga mendekati Rp {target_price:,} (PBV {target_pbv}x) atau jika fundamental rusak.",
+            "is_recommended": is_recommended,
+            "reasons": reasons,
+            "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
     except Exception as e:
         print(f"   ⚠️ Error memproses {ticker}: {e}")
         return None
@@ -125,10 +133,13 @@ def analyze_stock(ticker):
 # Eksekusi
 results = []
 for ticker in TICKERS:
-    print(f" Menganalisis {ticker}...")
+    print(f"🔍 Menganalisis {ticker}...")
     data = analyze_stock(ticker)
     if data:
-        print(f"   🚀 {data['ticker']} LOLOS! Potensi Gain: +{data['capital_gain_potential']}%")
+        if data['is_recommended']:
+            print(f"    {data['ticker']} LOLOS! Potensi Gain: +{data['capital_gain_potential']}%")
+        else:
+            print(f"   ️ {data['ticker']} belum layak: {', '.join(data['reasons'])}")
         results.append(data)
 
 # Simpan ke root folder
@@ -139,6 +150,6 @@ output_path = os.path.join(root_dir, 'data.json')
 try:
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=4, ensure_ascii=False)
-    print(f"\n🎉 SELESAI! {len(results)} saham ditemukan. Data disimpan ke {output_path}")
+    print(f"\n🎉 SELESAI! {len(results)} saham dianalisis. Data disimpan ke {output_path}")
 except Exception as e:
     print(f"\n⚠️ GAGAL menyimpan data.json. Detail: {e}")
