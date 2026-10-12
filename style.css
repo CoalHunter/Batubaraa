@@ -1,3 +1,8 @@
+/* ==========================================
+   WPscanner style.css v4.2 (LENGKAP)
+   Tema: Shopee-like, Mobile-First
+   ========================================== */
+
 :root {
     --primary: #ee4d2d;
     --primary-dark: #d73211;
@@ -19,6 +24,7 @@ body {
     line-height: 1.5;
 }
 
+/* === HEADER === */
 header {
     background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     color: white;
@@ -42,6 +48,43 @@ header p {
     font-weight: 400;
 }
 
+.header-actions {
+    margin-top: 12px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.log-btn, .cache-btn {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.4);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.log-btn:hover {
+    background: rgba(255,255,255,0.3);
+    border-color: white;
+}
+
+.cache-btn {
+    background: rgba(255,255,255,0.1);
+    color: #ffcccc;
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+.cache-btn:hover {
+    background: rgba(255,0,0,0.2);
+    border-color: #ff4444;
+    color: white;
+}
+
+/* === STATS BAR === */
 .stats-bar {
     max-width: 1200px;
     margin: 15px auto;
@@ -55,6 +98,36 @@ header p {
 
 .refresh-hint { font-size: 0.8rem; font-weight: normal; font-style: italic; }
 
+/* === SEARCH BAR === */
+.search-container {
+    max-width: 1200px;
+    margin: 0 auto 15px;
+    padding: 0 15px;
+}
+
+#searchInput {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    color: #222;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+#searchInput:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(238, 77, 45, 0.1);
+}
+
+#searchInput::placeholder {
+    color: #999;
+}
+
+/* === GRID KARTU === */
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -79,13 +152,13 @@ header p {
 .card:hover {
     transform: translateY(-3px);
     box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-    border-color: var(--primary);
 }
 
 .ticker { font-weight: 800; font-size: 1.1rem; color: var(--primary); margin-bottom: 5px; }
 .price { font-size: 1.1rem; font-weight: 700; margin: 8px 0; color: var(--text); }
 .gain-preview { font-size: 0.85rem; color: var(--gain); font-weight: 700; margin-bottom: 10px; }
 
+/* === BADGES === */
 .badge {
     display: inline-block;
     background: #fff0eb;
@@ -98,104 +171,29 @@ header p {
     text-align: center;
 }
 
+.badge-recommend {
+    background: #26aa99;
+    color: white;
+    font-weight: 700;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+}
+
 .badge-accum { background: #e6f7f4; color: var(--gain); margin-top: 5px; }
 
-.modal {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.6);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
+.valuation-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
-.modal-content {
-    background: white;
-    padding: 25px;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 450px;
-    position: relative;
-    max-height: 90vh;
-    overflow-y: auto;
-    animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.close-btn {
-    position: absolute;
-    top: 15px; right: 20px;
-    font-size: 1.8rem;
-    cursor: pointer;
-    color: var(--text-light);
-    line-height: 1;
-}
-
-.modal-header h2 { margin: 0; color: var(--primary); font-size: 1.8rem; font-weight: 800; }
-.modal-header span { color: var(--text-light); font-size: 0.95rem; display: block; margin-top: 5px; }
-
-.highlight-box { display: flex; gap: 15px; margin: 20px 0; }
-
-.highlight-item {
-    flex: 1;
-    background: #f9f9f9;
-    padding: 15px;
-    border-radius: 8px;
-    text-align: center;
-    border: 1px solid var(--border);
-}
-
-.highlight-item .label { display: block; font-size: 0.8rem; color: var(--text-light); margin-bottom: 5px; font-weight: 600; }
-.highlight-item .value { display: block; font-size: 1.4rem; font-weight: 800; }
-.highlight-item .value.gain { color: var(--gain); }
-.highlight-item .value.div { color: var(--primary); }
-
-.detail-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 12px 0;
-    border-bottom: 1px solid #f0f0f0;
-    font-size: 0.95rem;
-}
-.detail-row:last-child { border-bottom: none; }
-
-.div-history {
-    margin-top: 15px;
-    background: #f0fdf4;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 4px solid var(--gain);
-}
-.div-history h4 { margin: 0 0 10px 0; font-size: 0.9rem; color: #166534; font-weight: 700; }
-.div-history ul { margin: 0; padding-left: 20px; font-size: 0.85rem; color: #333; line-height: 1.8; }
-.div-history p { font-size: 0.8rem; margin-top: 10px; color: #555; font-style: italic; }
-
-.disclaimer {
-    margin-top: 20px;
-    padding: 15px;
-    background: #fff8f6;
-    border: 1px solid #ffd8cc;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    color: #555;
-    line-height: 1.6;
-}
-
-@media (max-width: 600px) {
-    .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .card { padding: 12px; }
-    .ticker { font-size: 1rem; }
-    .price { font-size: 1rem; }
-    .highlight-item .value { font-size: 1.2rem; }
-}
-/* === TAMBAHAN: Styling untuk saham yang tidak direkomendasikan === */
-
+/* === STATUS KARTU === */
 .card.not-recommended {
     opacity: 0.5;
     background: #f0f0f0;
@@ -219,14 +217,6 @@ header p {
     box-shadow: 0 6px 16px rgba(38, 170, 153, 0.3);
 }
 
-.badge-recommend {
-    background: #26aa99;
-    color: white;
-    font-weight: 700;
-    padding: 6px 10px;
-    font-size: 0.8rem;
-}
-
 .reason-text {
     font-size: 0.85rem;
     color: #757575;
@@ -240,6 +230,205 @@ header p {
     line-height: 1.4;
 }
 
+/* === MODAL === */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 450px;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+}
+
+.log-modal-content {
+    max-width: 600px;
+    max-height: 85vh;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px; right: 20px;
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: var(--text-light);
+    line-height: 1;
+}
+
+.modal-header h2 { margin: 0; color: var(--primary); font-size: 1.8rem; font-weight: 800; }
+.modal-header span { color: var(--text-light); font-size: 0.95rem; display: block; margin-top: 5px; }
+
+/* === HIGHLIGHT BOX (Gain & Dividen) === */
+.highlight-box { display: flex; gap: 15px; margin: 20px 0; }
+
+.highlight-item {
+    flex: 1;
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid var(--border);
+}
+
+.highlight-item .label { display: block; font-size: 0.8rem; color: var(--text-light); margin-bottom: 5px; font-weight: 600; }
+.highlight-item .value { display: block; font-size: 1.4rem; font-weight: 800; }
+.highlight-item .value.gain { color: var(--gain); }
+.highlight-item .value.div { color: var(--primary); }
+
+/* === DETAIL ROW === */
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.95rem;
+    gap: 10px;
+}
+.detail-row:last-child { border-bottom: none; }
+
+.detail-row .label-group {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 4px;
+}
+
+/* === TOOLTIP (DIPERBAIKI v4.2) === */
+.tooltip-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    color: #555;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: help;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.2s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    vertical-align: middle;
+}
+
+.tooltip-trigger:hover,
+.tooltip-trigger.active {
+    background: var(--primary);
+    color: white;
+}
+
+/* TOOLTIP TEXT - TERSEMBUNYI SECARA DEFAULT */
+.tooltip-trigger .tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 240px;
+    max-width: 240px;
+    padding: 12px 14px;
+    background: #222;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.5;
+    border-radius: 8px;
+    text-align: left;
+    z-index: 10000;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+    pointer-events: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Panah kecil di bawah tooltip (desktop: di atas trigger) */
+.tooltip-trigger .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: #222 transparent transparent transparent;
+}
+
+/* TAMPILKAN TOOLTIP HANYA SAAT HOVER ATAU ACTIVE */
+.tooltip-trigger:hover .tooltip-text,
+.tooltip-trigger.active .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Styling konten glossary di dalam tooltip */
+.tooltip-trigger .tooltip-text b {
+    color: #ffd700;
+    font-size: 0.82rem;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.tooltip-trigger .tooltip-text i {
+    color: #e0e0e0;
+    font-style: italic;
+}
+
+/* Mobile: tooltip muncul di BAWAH trigger (karena layar sempit) */
+@media (max-width: 600px) {
+    .tooltip-trigger .tooltip-text {
+        width: 200px;
+        max-width: 200px;
+        font-size: 0.72rem;
+        padding: 10px 12px;
+        bottom: auto;
+        top: calc(100% + 8px);
+    }
+    .tooltip-trigger .tooltip-text::after {
+        top: auto;
+        bottom: 100%;
+        border-color: transparent transparent #222 transparent;
+    }
+}
+
+/* === DIVIDEN HISTORY === */
+.div-history {
+    margin-top: 15px;
+    background: #f0fdf4;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid var(--gain);
+}
+.div-history h4 { margin: 0 0 10px 0; font-size: 0.9rem; color: #166534; font-weight: 700; }
+.div-history ul { margin: 0; padding-left: 20px; font-size: 0.85rem; color: #333; line-height: 1.8; }
+.div-history p { font-size: 0.8rem; margin-top: 10px; color: #555; font-style: italic; }
+
+/* === NOT RECOMMENDED NOTICE === */
 .not-recommended-notice {
     background: #fff3e0;
     border-left: 4px solid #ff9800;
@@ -270,65 +459,20 @@ header p {
 .not-recommended-notice li {
     margin: 5px 0;
 }
-/* Search Bar */
-.search-container {
-    max-width: 1200px;
-    margin: 0 auto 15px;
-    padding: 0 15px;
-}
 
-#searchInput {
-    width: 100%;
-    padding: 12px 16px;
-    font-size: 0.95rem;
-    border: 2px solid #e0e0e0;
+/* === DISCLAIMER === */
+.disclaimer {
+    margin-top: 20px;
+    padding: 15px;
+    background: #fff8f6;
+    border: 1px solid #ffd8cc;
     border-radius: 8px;
-    background: white;
-    color: #222;
-    transition: border-color 0.2s;
-    box-sizing: border-box;
-}
-
-#searchInput:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(238, 77, 45, 0.1);
-}
-
-#searchInput::placeholder {
-    color: #999;
-}
-/* === HEADER BUTTONS === */
-.header-actions {
-    margin-top: 12px;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-}
-
-.log-btn {
-    background: rgba(255,255,255,0.2);
-    color: white;
-    border: 1px solid rgba(255,255,255,0.4);
-    padding: 8px 16px;
-    border-radius: 6px;
     font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.log-btn:hover {
-    background: rgba(255,255,255,0.3);
-    border-color: white;
+    color: #555;
+    line-height: 1.6;
 }
 
 /* === LOG MODAL === */
-.log-modal-content {
-    max-width: 600px;
-    max-height: 85vh;
-}
-
 .log-header {
     border-bottom: 2px solid var(--primary);
     padding-bottom: 12px;
@@ -449,7 +593,6 @@ header p {
     background: #fff5f5;
 }
 
-/* Scrollbar untuk log */
 .log-list::-webkit-scrollbar {
     width: 6px;
 }
@@ -467,55 +610,12 @@ header p {
 .log-list::-webkit-scrollbar-thumb:hover {
     background: #999;
 }
-/* === BADGE VALUASI DI KARTU === */
-.valuation-badge {
-    display: inline-block;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: white;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
 
-/* Tooltip text styling untuk konten glossary yang kaya */
-.tooltip-trigger .tooltip-text {
-    width: 260px;
-    line-height: 1.5;
-}
-
-.tooltip-trigger .tooltip-text b {
-    color: #ffd700;
-    font-size: 0.85rem;
-}
-
-.tooltip-trigger .tooltip-text i {
-    color: #e0e0e0;
-}
-
+/* === RESPONSIVE MOBILE === */
 @media (max-width: 600px) {
-    .tooltip-trigger .tooltip-text {
-        width: 220px;
-        font-size: 0.72rem;
-    }
-}
-/* === TOMBOL CLEAR CACHE === */
-.cache-btn {
-    background: rgba(255,255,255,0.1);
-    color: #ffcccc;
-    border: 1px solid rgba(255,255,255,0.3);
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.cache-btn:hover {
-    background: rgba(255,0,0,0.2);
-    border-color: #ff4444;
-    color: white;
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .card { padding: 12px; }
+    .ticker { font-size: 1rem; }
+    .price { font-size: 1rem; }
+    .highlight-item .value { font-size: 1.2rem; }
 }
