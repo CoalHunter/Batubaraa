@@ -27,34 +27,49 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalStocksEl = document.getElementById('totalStocks');
             const lastUpdateEl = document.getElementById('lastUpdate');
             
-            totalStocksEl.innerText = `${data.length} Saham Potensial Ditemukan`;
+            // Hitung yang direkomendasikan vs total
+            const recommended = data.filter(s => s.is_recommended).length;
+            totalStocksEl.innerText = `${recommended} Rekomendasi dari ${data.length} Saham`;
             
             if (data.length > 0 && data[0].last_updated) {
-                lastUpdateEl.innerText = `Data telah diperbarui: ${formatTanggalIndo(data[0].last_updated)}`;
+                lastUpdateEl.innerText = `Data diperbarui: ${formatTanggalIndo(data[0].last_updated)}`;
             } else {
-                lastUpdateEl.innerText = 'Belum ada data screening. Jalankan manual via Actions.';
+                lastUpdateEl.innerText = 'Belum ada data screening.';
             }
             
             if (data.length === 0) {
                 grid.innerHTML = `
                     <div style="grid-column: 1/-1; text-align:center; padding: 40px; color:#757575;">
-                        <h3>🔍 Tidak ada saham yang memenuhi kriteria ketat saat ini.</h3>
-                        <p>Ini tanda pasar sedang mahal atau tidak ada peluang "Deep Value". Tetap tenang dan cek kembali besok.</p>
+                        <h3>🔍 Tidak ada data saham.</h3>
+                        <p>Jalankan GitHub Actions untuk generate data.</p>
                     </div>`;
                 return;
             }
 
+            // Render semua saham
             data.forEach(stock => {
                 const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <div class="ticker">${stock.ticker}</div>
-                    <div class="price">Rp ${stock.price.toLocaleString('id-ID')}</div>
-                    <div class="gain-preview">🚀 Potensi Gain: +${stock.capital_gain_potential}%</div>
-                    <div class="badge">${stock.category}</div>
-                    ${stock.accumulation_signal ? '<div class="badge badge-accum">✅ Akumulasi Terdeteksi</div>' : ''}
-                `;
-                card.onclick = () => showModal(stock);
+                card.className = stock.is_recommended ? 'card recommended' : 'card not-recommended';
+                
+                if (stock.is_recommended) {
+                    card.innerHTML = `
+                        <div class="ticker">${stock.ticker}</div>
+                        <div class="price">Rp ${stock.price.toLocaleString('id-ID')}</div>
+                        <div class="gain-preview">🚀 Potensi Gain: +${stock.capital_gain_potential}%</div>
+                        <div class="badge badge-recommend">✅ REKOMENDASI BELI</div>
+                        <div class="badge badge-accum">Dividen: ${stock.dividend_yield}%</div>
+                    `;
+                    card.onclick = () => showModal(stock);
+                } else {
+                    card.innerHTML = `
+                        <div class="ticker">${stock.ticker}</div>
+                        <div class="price">Rp ${stock.price.toLocaleString('id-ID')}</div>
+                        <div class="reason-text">⏸️ Belum layak</div>
+                        <div class="reason-list">${stock.reasons.slice(0, 2).join(', ')}</div>
+                    `;
+                    card.onclick = () => showModal(stock, false);
+                }
+                
                 grid.appendChild(card);
             });
         })
@@ -63,14 +78,14 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('stockGrid').innerHTML = `
                 <div style="grid-column: 1/-1; text-align:center; padding: 40px; color: #ee4d2d;">
                     <h3>⚠️ Gagal Memuat Data</h3>
-                    <p>Pastikan file <code>data.json</code> sudah ada di folder yang sama dengan <code>index.html</code>.</p>
+                    <p>Pastikan file <code>data.json</code> sudah ada.</p>
                     <p><small>Detail error: ${err.message}</small></p>
                 </div>`;
             document.getElementById('lastUpdate').innerText = 'Gagal memuat waktu update.';
         });
 });
 
-function showModal(stock) {
+function showModal(stock, isRecommended = false) {
     document.getElementById('modalTicker').innerText = stock.ticker;
     document.getElementById('modalName').innerText = stock.name;
     document.getElementById('modalGain').innerText = `+${stock.capital_gain_potential}%`;
@@ -88,19 +103,25 @@ function showModal(stock) {
         divHtml += `</ul>
             <p>*Dividen konsisten adalah bukti arus kas nyata, bukan akuntansi palsu.</p>
         </div>`;
-    } else {
-        divHtml = `<div class="div-history" style="background:#fff3e0; border-left-color:#ee4d2d;">
-            <h4 style="color:#d73211;">⚠️ Peringatan Dividen</h4>
-            <p>Riwayat dividen 3 tahun tidak tersedia atau tidak konsisten. Hati-hati terhadap Dividen Trap.</p>
+    }
+
+    let statusHtml = '';
+    if (!isRecommended) {
+        statusHtml = `<div class="not-recommended-notice">
+            <h4>️ Belum Direkomendasikan</h4>
+            <p>Saham ini belum memenuhi semua kriteria ketat WPscanner. Alasan:</p>
+            <ul>${stock.reasons.map(r => `<li>${r}</li>`).join('')}</ul>
+            <p><strong>Pantau terus</strong> dan tunggu sampai semua kriteria terpenuhi.</p>
         </div>`;
     }
 
     document.getElementById('modalDetails').innerHTML = `
+        ${statusHtml}
         <div class="detail-row"><span>Harga Saat Ini</span> <strong>Rp ${stock.price.toLocaleString('id-ID')}</strong></div>
         <div class="detail-row"><span>Area Beli Ideal</span> <span style="color:#26aa99; font-weight:700;">Rp ${stock.buy_zone.toLocaleString('id-ID')}</span></div>
         <div class="detail-row"><span>Target Jual (Re-rating)</span> <span style="color:#ee4d2d; font-weight:700;">Rp ${stock.target_sell.toLocaleString('id-ID')}</span></div>
         <div class="detail-row"><span>Valuasi Saat Ini</span> <span>PBV: ${stock.pbv}x | PER: ${stock.per}x</span></div>
-        <div class="detail-row"><span>Payout Ratio</span> <span>${stock.payout_ratio}% (Aman)</span></div>
+        <div class="detail-row"><span>Payout Ratio</span> <span>${stock.payout_ratio}%</span></div>
         ${divHtml}
     `;
     
@@ -116,4 +137,4 @@ window.onclick = function(event) {
     if (event.target == modal) {
         closeModal();
     }
-                          }
+}
