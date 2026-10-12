@@ -1,4 +1,6 @@
-// app.js - WPscanner v4.0 (Modular Glossary + Valuasi Label)
+// app.js - WPscanner v4.1 (Lengkap dengan Clear Cache & Glossary)
+
+// 1. Fungsi Format Tanggal Indonesia
 function formatTanggalIndo(dateStr) {
     const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
@@ -16,7 +18,7 @@ function formatTanggalIndo(dateStr) {
     return `${hari}, ${tanggal}-${bulan}-${tahun} pada ${jam}:${menit}:${detik} WIB`;
 }
 
-// Helper: generate tooltip dari glossary.js
+// 2. Helper untuk membuat Tooltip dari glossary.js
 function makeTooltip(label, glossaryKey) {
     const tooltipContent = glossaryKey && GLOSSARY[glossaryKey] ? getTooltipHTML(glossaryKey) : '';
     const hasTooltip = tooltipContent !== '';
@@ -31,6 +33,7 @@ function makeTooltip(label, glossaryKey) {
 let allStocks = [];
 let scanData = null;
 
+// 3. Main Event Listener
 document.addEventListener('DOMContentLoaded', () => {
     fetch('data.json?v=' + Date.now())
         .then(res => {
@@ -46,10 +49,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const stocks = data.stocks || data;
             if (!Array.isArray(stocks)) throw new Error('Data bukan array');
             
+            // Sorting Abjad
             allStocks = [...stocks].sort((a, b) => {
                 return a.ticker.localeCompare(b.ticker, 'id', { sensitivity: 'base' });
             });
             
+            // Update Stats Header
             const recommended = allStocks.filter(s => s.status === 'recommended').length;
             totalStocksEl.innerText = `${recommended} Rekomendasi dari ${allStocks.length} Saham`;
             
@@ -71,6 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderStocks(allStocks);
 
+            // --- EVENT LISTENERS ---
+
+            // A. Search Bar
             const searchInput = document.getElementById('searchInput');
             searchInput.addEventListener('input', (e) => {
                 const keyword = e.target.value.toLowerCase().trim();
@@ -81,9 +89,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderStocks(filtered);
             });
 
+            // B. Tombol Log Analisis
             document.getElementById('logBtn').addEventListener('click', showLogModal);
             
-            // Support tap untuk tooltip di mobile
+            // C. Tombol Clear Cache (BARU)
+            document.getElementById('clearCacheBtn').addEventListener('click', () => {
+                // Paksa browser reload dengan parameter waktu unik untuk bypass cache
+                const baseUrl = window.location.href.split('?')[0];
+                window.location.href = baseUrl + '?v=' + Date.now();
+            });
+            
+            // D. Support Tap untuk Tooltip di Mobile
             document.addEventListener('click', (e) => {
                 const trigger = e.target.closest('.tooltip-trigger');
                 if (trigger) {
@@ -103,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error loading data:', err);
             document.getElementById('stockGrid').innerHTML = `
                 <div style="grid-column: 1/-1; text-align:center; padding: 40px; color: #ee4d2d;">
-                    <h3>️ Gagal Memuat Data</h3>
+                    <h3>⚠️ Gagal Memuat Data</h3>
                     <p>Pastikan file <code>data.json</code> valid.</p>
                     <p><small>Detail error: ${err.message}</small></p>
                 </div>`;
@@ -111,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 });
 
+// 4. Fungsi Render Kartu Saham
 function renderStocks(stocks) {
     const grid = document.getElementById('stockGrid');
     grid.innerHTML = '';
@@ -134,7 +151,7 @@ function renderStocks(stocks) {
             card.innerHTML = `
                 <div class="ticker">${stock.ticker}</div>
                 <div class="price">Rp ${stock.price.toLocaleString('id-ID')}</div>
-                <div class="valuation-badge" style="background:${stock.valuation_color || '#26aa99'};color:white;padding:3px 8px;border-radius:4px;font-size:0.75rem;font-weight:700;margin-bottom:6px;">
+                <div class="valuation-badge" style="background:${stock.valuation_color || '#26aa99'};">
                     ${stock.valuation_label || 'Wajar'}
                 </div>
                 <div class="gain-preview">🚀 Potensi Gain: +${stock.capital_gain_potential}%</div>
@@ -146,10 +163,10 @@ function renderStocks(stocks) {
             card.innerHTML = `
                 <div class="ticker">${stock.ticker}</div>
                 <div class="price">Rp ${stock.price ? stock.price.toLocaleString('id-ID') : '-'}</div>
-                <div class="valuation-badge" style="background:${stock.valuation_color || '#757575'};color:white;padding:3px 8px;border-radius:4px;font-size:0.75rem;font-weight:700;margin-bottom:6px;">
+                <div class="valuation-badge" style="background:${stock.valuation_color || '#757575'};">
                     ${stock.valuation_label || '-'}
                 </div>
-                <div class="reason-text">️ Belum layak</div>
+                <div class="reason-text">⏸️ Belum layak</div>
                 <div class="reason-list">${stock.reasons ? stock.reasons.slice(0, 2).join(', ') : (stock.fail_reason || 'Tidak memenuhi kriteria')}</div>
             `;
             card.onclick = () => showModal(stock, false);
@@ -159,6 +176,7 @@ function renderStocks(stocks) {
     });
 }
 
+// 5. Fungsi Modal Detail Saham
 function showModal(stock, isRecommended = false) {
     document.getElementById('modalTicker').innerText = stock.ticker;
     document.getElementById('modalName').innerText = stock.name || '-';
@@ -166,17 +184,19 @@ function showModal(stock, isRecommended = false) {
     const gainText = stock.capital_gain_potential < 0 
         ? `${stock.capital_gain_potential}%` 
         : `+${stock.capital_gain_potential}%`;
+        
     document.getElementById('modalGain').innerText = gainText;
     document.getElementById('modalDiv').innerText = `${stock.dividend_yield}%`;
     document.getElementById('modalSL').innerText = `Rp ${stock.stop_loss ? stock.stop_loss.toLocaleString('id-ID') : '-'}`;
 
     // Badge Valuasi di header modal
     const valuationBadge = stock.valuation_label 
-        ? `<div style="display:inline-block;background:${stock.valuation_color || '#0284c7'};color:white;padding:6px 14px;border-radius:20px;font-size:0.85rem;font-weight:700;margin-top:8px;">
+        ? `<div style="display:inline-block;background:${stock.valuation_color || '#0284c7'};color:white;padding:6px 14px;border-radius:20px;font-size:0.85rem;font-weight:700;margin-bottom:15px;">
              Valuasi: ${stock.valuation_label} (PBV ${stock.pbv}x)
            </div>` 
         : '';
 
+    // Riwayat Dividen
     let divHtml = '';
     if (stock.div_history && stock.div_history.length > 0) {
         divHtml = `<div class="div-history">
@@ -194,6 +214,7 @@ function showModal(stock, isRecommended = false) {
         </div>`;
     }
 
+    // Status Belum Direkomendasikan
     let statusHtml = '';
     if (!isRecommended) {
         const reasons = stock.reasons || [stock.fail_reason || 'Tidak memenuhi kriteria'];
@@ -205,6 +226,7 @@ function showModal(stock, isRecommended = false) {
         </div>`;
     }
 
+    // Detail Row dengan Tooltip
     const priceHtml = stock.price ? `
         <div class="detail-row">
             ${makeTooltip('Harga Saat Ini', '')}
@@ -255,6 +277,7 @@ function showModal(stock, isRecommended = false) {
     document.getElementById('stockModal').style.display = 'flex';
 }
 
+// 6. Fungsi Modal Log Analisis
 function showLogModal() {
     if (!scanData) return;
     
@@ -297,7 +320,12 @@ function showLogModal() {
             <div class="log-item ${stock.status}">
                 <span class="log-status-icon">${icon}</span>
                 <div class="log-item-content">
-                    <div class="log-item-ticker">${stock.ticker} <span style="display:inline-block;background:${stock.valuation_color || '#757575'};color:white;padding:2px 6px;border-radius:3px;font-size:0.7rem;margin-left:6px;">${stock.valuation_label || '-'}</span></div>
+                    <div class="log-item-ticker">
+                        ${stock.ticker} 
+                        <span style="display:inline-block;background:${stock.valuation_color || '#757575'};color:white;padding:2px 6px;border-radius:3px;font-size:0.7rem;margin-left:6px;">
+                            ${stock.valuation_label || '-'}
+                        </span>
+                    </div>
                     <div class="log-item-name">${stock.name || '-'}</div>
                     <div class="log-item-reason">${reasonText}</div>
                 </div>
@@ -309,6 +337,7 @@ function showLogModal() {
     document.getElementById('logModal').style.display = 'flex';
 }
 
+// 7. Fungsi Tutup Modal
 function closeModal() {
     document.getElementById('stockModal').style.display = 'none';
 }
@@ -317,6 +346,7 @@ function closeLogModal() {
     document.getElementById('logModal').style.display = 'none';
 }
 
+// Tutup modal jika klik di area gelap (luar modal)
 window.onclick = function(event) {
     if (event.target == document.getElementById('stockModal')) {
         closeModal();
