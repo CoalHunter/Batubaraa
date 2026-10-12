@@ -15,7 +15,7 @@ except Exception as e:
     print(f"❌ BATAL: Error membaca ticker.\nDetail: {e}")
     sys.exit(1)
 
-print(f"✅ Memuat {len(TICKERS)} ticker. Memulai screening...")
+print(f"✅ Memuat {len(TICKERS)} ticker. Memulai screening (Mode Anti-Glitch)...")
 
 import yfinance as yf
 import pandas as pd
@@ -25,12 +25,12 @@ def get_dividend_history(ticker):
     try:
         stock = yf.Ticker(ticker)
         divs = stock.dividends
-        if divs.empty: 
-            return []
-        cutoff_date = pd.Timestamp.now() - pd.DateOffset(years=3)
+        if divs.empty: return []
+        
+        # Ambil 3 tahun terakhir
+        cutoff_date = pd.Timestamp.now(tz=divs.index.tz) - pd.DateOffset(years=3)
         recent_divs = divs[divs.index >= cutoff_date]
-        if recent_divs.empty: 
-            return []
+        if recent_divs.empty: return []
             
         annual_divs = recent_divs.groupby(recent_divs.index.year).sum()
         hist_3y = stock.history(period="3y")
@@ -48,7 +48,7 @@ def get_dividend_history(ticker):
                 })
         return sorted(history_list, key=lambda x: x['year'], reverse=True)
     except Exception as e:
-        print(f"   ⚠️ Error div history {ticker}: {e}")
+        print(f"   ⚠️ Gagal ambil riwayat dividen {ticker}: {e}")
         return []
 
 def analyze_stock(ticker):
@@ -59,64 +59,74 @@ def analyze_stock(ticker):
         hist_1y_weekly = stock.history(period="1y", interval="1wk")
         
         if len(hist_1y_weekly) < 20 or hist_1mo.empty: 
-            print(f"   ⚠️ Data tidak cukup untuk {ticker}")
             return None
 
-        current_price = info.get('currentPrice', hist_1mo['Close'].iloc[-1])
-        
+        current_price = info.get('currentPrice') or (hist_1mo['Close'].iloc[-1] if not hist_1mo['Close'].empty else 0)
         if not current_price or current_price <= 0:
-            print(f"   ⚠️ Harga tidak valid untuk {ticker}")
             return None
         
-        # Gerbang Likuiditas
+        # 1. GERBANG LIKUIDITAS
         market_cap = info.get('marketCap', 0) or 0
         avg_daily_value = (hist_1mo['Close'] * hist_1mo['Volume']).mean()
         
-        if market_cap < 10_000_000_000_000: 
-            return None
-        if avg_daily_value < 50_000_000_000: 
-            return None
+        if market_cap < 10_000_000_000_000: return None
+        if avg_daily_value < 50_000_000_000: return None
 
-        # Fundamental - Pastikan semua ada default value
-        dy = info.get('dividendYield') or 0
-        pbv = info.get('priceToBook') or 999
-        per = info.get('trailingPE') or 999
-        payout_ratio = info.get('payoutRatio') or 0 
-        earnings_growth = info.get('earningsGrowth') or 0
-        der = info.get('debtToEquity') or 999
+        # 2. SANITASI DATA (Anti-Glitch Yahoo Finance)
+        # Fix Dividend Yield: Kadang 0.06, kadang 6.0. Kita normalisasi ke persen.
+        raw_dy = info.get('dividendYield', 0) or 0
+        dy = (raw_dy * 100) if raw_dy < 1 else raw_dy
+        
+        # Fix PBV/PER: Yahoo kadang return angka glitch ribuan. Kita batasi maksimal 20x.
+        raw_pbv = info.get('priceToBook', 999) or 999
+        pbv = raw_pbv if raw_pbv < 20 else 999 
+        
+        raw_per = info.get('trailingPE', 999) or 999
+        per = raw_per if raw_per < 100 else 999
+        
+        payout_ratio = info.get('payoutRatio', 0) or 0 
+        earnings_growth = info.get('earningsGrowth', 0) or 0
+        
+        # Fix DER untuk Bank: Bank WAJIB DER tinggi. Kita abaikan cek DER untuk 4 bank besar.
+        bank_tickers = ['BBCA.JK', 'BBRI.JK', 'BMRI.JK', 'BBNI.JK']
+        is_bank = ticker in bank_tickers
+        raw_der = info.get('debtToEquity', 999) or 999
+        der = raw_der if not is_bank else 0 # Anggap 0 (aman) untuk bank agar tidak gagal di filter DER
 
-        # Teknikal Mingguan
+        # 3. TEKNIKAL MINGGUAN
         sma_20_weekly = hist_1y_weekly['Close'].tail(20).mean()
         is_in_accumulation_zone = (current_price <= (sma_20_weekly * 1.15)) and (current_price >= (sma_20_weekly * 0.80))
         vol_4w = hist_1y_weekly['Volume'].tail(4).mean()
         vol_20w = hist_1y_weekly['Volume'].tail(20).mean()
         volume_expansion_weekly = vol_4w > (vol_20w * 1.15)
 
-        # Konsistensi Dividen
+        # 4. KONSISTENSI DIVIDEN
         div_history = get_dividend_history(ticker)
         is_consistent = True
         if len(div_history) >= 2:
             if div_history[1]['dps'] > 0 and div_history[0]['dps'] < (div_history[1]['dps'] * 0.70):
                 is_consistent = False
 
-        # Kalkulasi Re-rating
+        # 5. KALKULASI RE-RATING
         target_pbv = 1.2
-        if pbv > 0 and pbv < 999:
+        # Jika PBV valid (< 20), hitung upside. Jika tidak, upside 0.
+        if pbv > 0 and pbv < 20:
             re_rating_multiplier = target_pbv / pbv
         else:
             re_rating_multiplier = 1.0
-        max_upside = min(re_rating_multiplier, 2.0)
+            
+        max_upside = min(re_rating_multiplier, 2.0) # Max gain 100%
         target_price = round(current_price * max_upside, 2)
         capital_gain_potential = round((max_upside - 1) * 100, 1)
         stop_loss = round(current_price * 0.85, 2)
 
-        # Cek semua filter
+        # 6. CEK FILTER & ALASAN
         reasons = []
         if pbv >= 0.9: reasons.append("PBV ≥ 0.9x")
-        if dy < 0.05: reasons.append("Dividen < 5%")
+        if dy < 5.0: reasons.append("Dividen < 5%") # Sudah dalam persen
         if not (0.20 <= payout_ratio <= 0.85): reasons.append("Payout Ratio tidak ideal")
         if earnings_growth <= -0.10: reasons.append("Laba anjlok")
-        if der >= 100: reasons.append("Utang tinggi")
+        if not is_bank and der >= 100: reasons.append("Utang tinggi") # Skip cek utang untuk bank
         if not is_in_accumulation_zone: reasons.append("Belum di area akumulasi")
         if not volume_expansion_weekly: reasons.append("Volume belum ekspansi")
         if not is_consistent: reasons.append("Dividen tidak konsisten")
@@ -129,7 +139,7 @@ def analyze_stock(ticker):
             "price": round(float(current_price), 2),
             "pbv": round(float(pbv), 2),
             "per": round(float(per), 2),
-            "dividend_yield": round(float(dy) * 100, 2),  # Konversi desimal ke persen
+            "dividend_yield": round(float(dy), 2), # Sudah dalam persen, jangan dikali 100 lagi
             "payout_ratio": round(float(payout_ratio) * 100, 1),
             "category": "Deep Value & Re-rating",
             "buy_zone": round(float(current_price) * 0.95, 2),
@@ -145,11 +155,9 @@ def analyze_stock(ticker):
         }
     except Exception as e:
         print(f"   ⚠️ Error memproses {ticker}: {e}")
-        import traceback
-        traceback.print_exc()
         return None
 
-# Eksekusi
+# EKSEKUSI
 results = []
 for ticker in TICKERS:
     print(f"🔍 Menganalisis {ticker}...")
@@ -160,10 +168,8 @@ for ticker in TICKERS:
         else:
             print(f"   ⏸️ {data['ticker']} belum layak: {', '.join(data['reasons'])}")
         results.append(data)
-    else:
-        print(f"   ❌ {ticker} gagal dianalisis")
 
-# Simpan ke root folder
+# SIMPAN KE ROOT FOLDER
 script_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.dirname(script_dir)
 output_path = os.path.join(root_dir, 'data.json')
@@ -179,5 +185,3 @@ try:
     print(f"   Data disimpan ke {output_path}")
 except Exception as e:
     print(f"\n⚠️ GAGAL menyimpan data.json. Detail: {e}")
-    import traceback
-    traceback.print_exc()
