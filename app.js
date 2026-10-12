@@ -1,4 +1,4 @@
-// app.js - WPscanner v3.1
+// app.js - WPscanner v4.0 (Modular Glossary + Valuasi Label)
 function formatTanggalIndo(dateStr) {
     const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
@@ -14,6 +14,18 @@ function formatTanggalIndo(dateStr) {
     const detik = String(d.getSeconds()).padStart(2, '0');
     
     return `${hari}, ${tanggal}-${bulan}-${tahun} pada ${jam}:${menit}:${detik} WIB`;
+}
+
+// Helper: generate tooltip dari glossary.js
+function makeTooltip(label, glossaryKey) {
+    const tooltipContent = glossaryKey && GLOSSARY[glossaryKey] ? getTooltipHTML(glossaryKey) : '';
+    const hasTooltip = tooltipContent !== '';
+    return `
+        <div class="label-group">
+            <span>${label}</span>
+            ${hasTooltip ? `<span class="tooltip-trigger" tabindex="0">?<span class="tooltip-text">${tooltipContent}</span></span>` : ''}
+        </div>
+    `;
 }
 
 let allStocks = [];
@@ -70,12 +82,28 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             document.getElementById('logBtn').addEventListener('click', showLogModal);
+            
+            // Support tap untuk tooltip di mobile
+            document.addEventListener('click', (e) => {
+                const trigger = e.target.closest('.tooltip-trigger');
+                if (trigger) {
+                    document.querySelectorAll('.tooltip-trigger.active').forEach(t => {
+                        if (t !== trigger) t.classList.remove('active');
+                    });
+                    trigger.classList.toggle('active');
+                    e.stopPropagation();
+                } else {
+                    document.querySelectorAll('.tooltip-trigger.active').forEach(t => {
+                        t.classList.remove('active');
+                    });
+                }
+            });
         })
         .catch(err => {
             console.error('Error loading data:', err);
             document.getElementById('stockGrid').innerHTML = `
                 <div style="grid-column: 1/-1; text-align:center; padding: 40px; color: #ee4d2d;">
-                    <h3>⚠️ Gagal Memuat Data</h3>
+                    <h3>️ Gagal Memuat Data</h3>
                     <p>Pastikan file <code>data.json</code> valid.</p>
                     <p><small>Detail error: ${err.message}</small></p>
                 </div>`;
@@ -106,6 +134,9 @@ function renderStocks(stocks) {
             card.innerHTML = `
                 <div class="ticker">${stock.ticker}</div>
                 <div class="price">Rp ${stock.price.toLocaleString('id-ID')}</div>
+                <div class="valuation-badge" style="background:${stock.valuation_color || '#26aa99'};color:white;padding:3px 8px;border-radius:4px;font-size:0.75rem;font-weight:700;margin-bottom:6px;">
+                    ${stock.valuation_label || 'Wajar'}
+                </div>
                 <div class="gain-preview">🚀 Potensi Gain: +${stock.capital_gain_potential}%</div>
                 <div class="badge badge-recommend">✅ REKOMENDASI BELI</div>
                 <div class="badge badge-accum">Dividen di Area Beli: ${stock.dividend_yield}%</div>
@@ -115,7 +146,10 @@ function renderStocks(stocks) {
             card.innerHTML = `
                 <div class="ticker">${stock.ticker}</div>
                 <div class="price">Rp ${stock.price ? stock.price.toLocaleString('id-ID') : '-'}</div>
-                <div class="reason-text">⏸️ Belum layak</div>
+                <div class="valuation-badge" style="background:${stock.valuation_color || '#757575'};color:white;padding:3px 8px;border-radius:4px;font-size:0.75rem;font-weight:700;margin-bottom:6px;">
+                    ${stock.valuation_label || '-'}
+                </div>
+                <div class="reason-text">️ Belum layak</div>
                 <div class="reason-list">${stock.reasons ? stock.reasons.slice(0, 2).join(', ') : (stock.fail_reason || 'Tidak memenuhi kriteria')}</div>
             `;
             card.onclick = () => showModal(stock, false);
@@ -129,20 +163,24 @@ function showModal(stock, isRecommended = false) {
     document.getElementById('modalTicker').innerText = stock.ticker;
     document.getElementById('modalName').innerText = stock.name || '-';
     
-    // ✅ Tampilkan capital gain dengan format yang jelas
     const gainText = stock.capital_gain_potential < 0 
-        ? `${stock.capital_gain_potential}% (Sudah Mahal)` 
+        ? `${stock.capital_gain_potential}%` 
         : `+${stock.capital_gain_potential}%`;
     document.getElementById('modalGain').innerText = gainText;
-    
-    // ✅ Tampilkan yield di area beli (bukan harga saat ini)
     document.getElementById('modalDiv').innerText = `${stock.dividend_yield}%`;
     document.getElementById('modalSL').innerText = `Rp ${stock.stop_loss ? stock.stop_loss.toLocaleString('id-ID') : '-'}`;
+
+    // Badge Valuasi di header modal
+    const valuationBadge = stock.valuation_label 
+        ? `<div style="display:inline-block;background:${stock.valuation_color || '#0284c7'};color:white;padding:6px 14px;border-radius:20px;font-size:0.85rem;font-weight:700;margin-top:8px;">
+             Valuasi: ${stock.valuation_label} (PBV ${stock.pbv}x)
+           </div>` 
+        : '';
 
     let divHtml = '';
     if (stock.div_history && stock.div_history.length > 0) {
         divHtml = `<div class="div-history">
-            <h4>️ Safety Net: Riwayat Dividen 3 Tahun</h4>
+            <h4>🛡️ Safety Net: Riwayat Dividen 3 Tahun</h4>
             <ul>`;
         stock.div_history.forEach(h => {
             divHtml += `<li><strong>Tahun ${h.year}:</strong> Dibagi Rp ${h.dps.toLocaleString('id-ID')}/lembar (Est. Yield ${h.yield}%)</li>`;
@@ -153,7 +191,6 @@ function showModal(stock, isRecommended = false) {
                 DPS Rata-rata: <strong>Rp ${stock.avg_dps_3y || 0}</strong>/lembar<br>
                 Yield di Area Beli (Rp ${stock.buy_zone ? stock.buy_zone.toLocaleString('id-ID') : '-'}): <strong style="color:#26aa99;">${stock.dividend_yield}%</strong>
             </p>
-            <p>*Dividen konsisten adalah bukti arus kas nyata, bukan akuntansi palsu.</p>
         </div>`;
     }
 
@@ -169,18 +206,47 @@ function showModal(stock, isRecommended = false) {
     }
 
     const priceHtml = stock.price ? `
-        <div class="detail-row"><span>Harga Saat Ini</span> <strong>Rp ${stock.price.toLocaleString('id-ID')}</strong></div>
-        <div class="detail-row"><span>Dividen Yield (Harga Sekarang)</span> <span style="color:#757575;">${stock.dividend_yield_current || 0}%</span></div>
-        <div class="detail-row"><span>Area Beli Ideal (Support Kuat)</span> <span style="color:#26aa99; font-weight:700;">Rp ${stock.buy_zone ? stock.buy_zone.toLocaleString('id-ID') : '-'}</span></div>
-        <div class="detail-row"><span>Dividen Yield (di Area Beli)</span> <span style="color:#26aa99; font-weight:700;">${stock.dividend_yield}%</span></div>
-        <div class="detail-row"><span>Target Jual (Re-rating)</span> <span style="color:#ee4d2d; font-weight:700;">Rp ${stock.target_sell ? stock.target_sell.toLocaleString('id-ID') : '-'}</span></div>
-        <div class="detail-row"><span>Potensi Capital Gain</span> <span style="color:${stock.capital_gain_potential >= 0 ? '#26aa99' : '#ee4d2d'}; font-weight:700;">${gainText}</span></div>
-        <div class="detail-row"><span>Valuasi Saat Ini</span> <span>PBV: ${stock.pbv || '-'}x | PER: ${stock.per || '-'}x</span></div>
-        <div class="detail-row"><span>Payout Ratio</span> <span>${stock.payout_ratio ? stock.payout_ratio + '%' : '-'}</span></div>
+        <div class="detail-row">
+            ${makeTooltip('Harga Saat Ini', '')}
+            <strong>Rp ${stock.price.toLocaleString('id-ID')}</strong>
+        </div>
+        <div class="detail-row">
+            ${makeTooltip('Valuasi Saat Ini', 'pbv')}
+            <span><strong style="color:${stock.valuation_color || '#0284c7'};">${stock.valuation_label || '-'}</strong> | PBV: ${stock.pbv}x | PER: ${stock.per}x</span>
+        </div>
+        <div class="detail-row">
+            ${makeTooltip('Dividen Yield (Harga Sekarang)', 'dividend_yield')}
+            <span style="color:#757575;">${stock.dividend_yield_current || 0}%</span>
+        </div>
+        <div class="detail-row">
+            ${makeTooltip('Area Beli Ideal', 'buy_zone')}
+            <span style="color:#26aa99; font-weight:700;">Rp ${stock.buy_zone ? stock.buy_zone.toLocaleString('id-ID') : '-'}</span>
+        </div>
+        <div class="detail-row">
+            ${makeTooltip('Dividen Yield (di Area Beli)', 'dividend_yield')}
+            <span style="color:#26aa99; font-weight:700;">${stock.dividend_yield}%</span>
+        </div>
+        <div class="detail-row">
+            ${makeTooltip('Target Jual', 'target_sell')}
+            <span style="color:#ee4d2d; font-weight:700;">Rp ${stock.target_sell ? stock.target_sell.toLocaleString('id-ID') : '-'}</span>
+        </div>
+        <div class="detail-row">
+            ${makeTooltip('Potensi Capital Gain', 'capital_gain')}
+            <span style="color:${stock.capital_gain_potential >= 0 ? '#26aa99' : '#ee4d2d'}; font-weight:700;">${gainText}</span>
+        </div>
+        <div class="detail-row">
+            ${makeTooltip('Payout Ratio', 'payout_ratio')}
+            <span>${stock.payout_ratio ? stock.payout_ratio + '%' : '-'}</span>
+        </div>
+        <div class="detail-row">
+            ${makeTooltip('Stop Loss', 'stop_loss')}
+            <span style="color:#ee4d2d; font-weight:700;">Rp ${stock.stop_loss ? stock.stop_loss.toLocaleString('id-ID') : '-'}</span>
+        </div>
     ` : `<div class="detail-row"><span>Status</span> <strong style="color:#c62828;">Gagal Dianalisis</strong></div>
         <div class="detail-row"><span>Alasan</span> <span>${stock.fail_reason || 'Data tidak tersedia'}</span></div>`;
 
     document.getElementById('modalDetails').innerHTML = `
+        ${valuationBadge}
         ${statusHtml}
         ${priceHtml}
         ${divHtml}
@@ -218,9 +284,9 @@ function showLogModal() {
         let icon, reasonText;
         if (stock.status === 'recommended') {
             icon = '✅';
-            reasonText = `Gain: +${stock.capital_gain_potential}% | Yield di Area Beli: ${stock.dividend_yield}%`;
+            reasonText = `Gain: +${stock.capital_gain_potential}% | Yield: ${stock.dividend_yield}% | Valuasi: ${stock.valuation_label || '-'}`;
         } else if (stock.status === 'not_recommended') {
-            icon = '️';
+            icon = '⏸️';
             reasonText = stock.reasons ? stock.reasons.join(', ') : (stock.fail_reason || '-');
         } else {
             icon = '❌';
@@ -231,7 +297,7 @@ function showLogModal() {
             <div class="log-item ${stock.status}">
                 <span class="log-status-icon">${icon}</span>
                 <div class="log-item-content">
-                    <div class="log-item-ticker">${stock.ticker}</div>
+                    <div class="log-item-ticker">${stock.ticker} <span style="display:inline-block;background:${stock.valuation_color || '#757575'};color:white;padding:2px 6px;border-radius:3px;font-size:0.7rem;margin-left:6px;">${stock.valuation_label || '-'}</span></div>
                     <div class="log-item-name">${stock.name || '-'}</div>
                     <div class="log-item-reason">${reasonText}</div>
                 </div>
