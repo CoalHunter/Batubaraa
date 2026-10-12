@@ -1,1 +1,15 @@
-[]
+[
+    {
+        "ticker": "BBCA",
+        "name": "Bank Central Asia Tbk",
+        "price": 6025.0,
+        "pbv": 2.73,
+        "per": 12.71,
+        "dividend_yield": 630.0,
+        "payout_ratio": 75.4,
+        "category": "Deep Value & Re-rating",
+        "buy_zone": 5723.75,
+        "target_sell": 2652.82,
+        "capital_gain_potential": -56.0,
+        "stop_loss": 5121.25,
+        "accumulation_signal": 
