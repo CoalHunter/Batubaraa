@@ -1,4 +1,4 @@
-// app.js - WPscanner v3.0
+// app.js - WPscanner v3.1
 function formatTanggalIndo(dateStr) {
     const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
@@ -31,11 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalStocksEl = document.getElementById('totalStocks');
             const lastUpdateEl = document.getElementById('lastUpdate');
             
-            // Format baru: data.stocks adalah array
             const stocks = data.stocks || data;
             if (!Array.isArray(stocks)) throw new Error('Data bukan array');
             
-            // SORTING ABJAD
             allStocks = [...stocks].sort((a, b) => {
                 return a.ticker.localeCompare(b.ticker, 'id', { sensitivity: 'base' });
             });
@@ -53,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (allStocks.length === 0) {
                 grid.innerHTML = `
                     <div style="grid-column: 1/-1; text-align:center; padding: 40px; color:#757575;">
-                        <h3> Tidak ada data saham.</h3>
+                        <h3>🔍 Tidak ada data saham.</h3>
                         <p>Jalankan GitHub Actions untuk generate data.</p>
                     </div>`;
                 return;
@@ -61,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderStocks(allStocks);
 
-            // SEARCH BAR
             const searchInput = document.getElementById('searchInput');
             searchInput.addEventListener('input', (e) => {
                 const keyword = e.target.value.toLowerCase().trim();
@@ -72,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderStocks(filtered);
             });
 
-            // LOG BUTTON
             document.getElementById('logBtn').addEventListener('click', showLogModal);
         })
         .catch(err => {
@@ -101,7 +97,6 @@ function renderStocks(stocks) {
     }
 
     stocks.forEach(stock => {
-        // Skip saham yang gagal total (tidak ada harga)
         if (stock.status === 'failed' && !stock.price) return;
         
         const card = document.createElement('div');
@@ -113,7 +108,7 @@ function renderStocks(stocks) {
                 <div class="price">Rp ${stock.price.toLocaleString('id-ID')}</div>
                 <div class="gain-preview">🚀 Potensi Gain: +${stock.capital_gain_potential}%</div>
                 <div class="badge badge-recommend">✅ REKOMENDASI BELI</div>
-                <div class="badge badge-accum">Dividen: ${stock.dividend_yield}%</div>
+                <div class="badge badge-accum">Dividen di Area Beli: ${stock.dividend_yield}%</div>
             `;
             card.onclick = () => showModal(stock, true);
         } else {
@@ -133,7 +128,14 @@ function renderStocks(stocks) {
 function showModal(stock, isRecommended = false) {
     document.getElementById('modalTicker').innerText = stock.ticker;
     document.getElementById('modalName').innerText = stock.name || '-';
-    document.getElementById('modalGain').innerText = `${stock.capital_gain_potential >= 0 ? '+' : ''}${stock.capital_gain_potential}%`;
+    
+    // ✅ Tampilkan capital gain dengan format yang jelas
+    const gainText = stock.capital_gain_potential < 0 
+        ? `${stock.capital_gain_potential}% (Sudah Mahal)` 
+        : `+${stock.capital_gain_potential}%`;
+    document.getElementById('modalGain').innerText = gainText;
+    
+    // ✅ Tampilkan yield di area beli (bukan harga saat ini)
     document.getElementById('modalDiv').innerText = `${stock.dividend_yield}%`;
     document.getElementById('modalSL').innerText = `Rp ${stock.stop_loss ? stock.stop_loss.toLocaleString('id-ID') : '-'}`;
 
@@ -146,6 +148,11 @@ function showModal(stock, isRecommended = false) {
             divHtml += `<li><strong>Tahun ${h.year}:</strong> Dibagi Rp ${h.dps.toLocaleString('id-ID')}/lembar (Est. Yield ${h.yield}%)</li>`;
         });
         divHtml += `</ul>
+            <p style="margin-top:10px; padding:8px; background:#e6f7f4; border-radius:4px; font-size:0.85rem;">
+                <strong>💡 Proyeksi di Area Beli:</strong><br>
+                DPS Rata-rata: <strong>Rp ${stock.avg_dps_3y || 0}</strong>/lembar<br>
+                Yield di Area Beli (Rp ${stock.buy_zone ? stock.buy_zone.toLocaleString('id-ID') : '-'}): <strong style="color:#26aa99;">${stock.dividend_yield}%</strong>
+            </p>
             <p>*Dividen konsisten adalah bukti arus kas nyata, bukan akuntansi palsu.</p>
         </div>`;
     }
@@ -163,8 +170,11 @@ function showModal(stock, isRecommended = false) {
 
     const priceHtml = stock.price ? `
         <div class="detail-row"><span>Harga Saat Ini</span> <strong>Rp ${stock.price.toLocaleString('id-ID')}</strong></div>
+        <div class="detail-row"><span>Dividen Yield (Harga Sekarang)</span> <span style="color:#757575;">${stock.dividend_yield_current || 0}%</span></div>
         <div class="detail-row"><span>Area Beli Ideal (Support Kuat)</span> <span style="color:#26aa99; font-weight:700;">Rp ${stock.buy_zone ? stock.buy_zone.toLocaleString('id-ID') : '-'}</span></div>
+        <div class="detail-row"><span>Dividen Yield (di Area Beli)</span> <span style="color:#26aa99; font-weight:700;">${stock.dividend_yield}%</span></div>
         <div class="detail-row"><span>Target Jual (Re-rating)</span> <span style="color:#ee4d2d; font-weight:700;">Rp ${stock.target_sell ? stock.target_sell.toLocaleString('id-ID') : '-'}</span></div>
+        <div class="detail-row"><span>Potensi Capital Gain</span> <span style="color:${stock.capital_gain_potential >= 0 ? '#26aa99' : '#ee4d2d'}; font-weight:700;">${gainText}</span></div>
         <div class="detail-row"><span>Valuasi Saat Ini</span> <span>PBV: ${stock.pbv || '-'}x | PER: ${stock.per || '-'}x</span></div>
         <div class="detail-row"><span>Payout Ratio</span> <span>${stock.payout_ratio ? stock.payout_ratio + '%' : '-'}</span></div>
     ` : `<div class="detail-row"><span>Status</span> <strong style="color:#c62828;">Gagal Dianalisis</strong></div>
@@ -208,12 +218,12 @@ function showLogModal() {
         let icon, reasonText;
         if (stock.status === 'recommended') {
             icon = '✅';
-            reasonText = `Potensi Gain: +${stock.capital_gain_potential}% | Dividen: ${stock.dividend_yield}%`;
+            reasonText = `Gain: +${stock.capital_gain_potential}% | Yield di Area Beli: ${stock.dividend_yield}%`;
         } else if (stock.status === 'not_recommended') {
-            icon = '⏸️';
+            icon = '️';
             reasonText = stock.reasons ? stock.reasons.join(', ') : (stock.fail_reason || '-');
         } else {
-            icon = '';
+            icon = '❌';
             reasonText = stock.fail_reason || 'Data tidak tersedia';
         }
         
