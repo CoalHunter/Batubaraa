@@ -194,3 +194,79 @@ header p {
     .price { font-size: 1rem; }
     .highlight-item .value { font-size: 1.2rem; }
 }
+/* === TAMBAHAN: Styling untuk saham yang tidak direkomendasikan === */
+
+.card.not-recommended {
+    opacity: 0.5;
+    background: #f0f0f0;
+    border: 1px dashed #ccc;
+}
+
+.card.not-recommended:hover {
+    opacity: 0.7;
+    transform: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border-color: #ccc;
+}
+
+.card.recommended {
+    border: 2px solid #26aa99;
+    box-shadow: 0 2px 8px rgba(38, 170, 153, 0.2);
+}
+
+.card.recommended:hover {
+    border-color: #1e8c7f;
+    box-shadow: 0 6px 16px rgba(38, 170, 153, 0.3);
+}
+
+.badge-recommend {
+    background: #26aa99;
+    color: white;
+    font-weight: 700;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+}
+
+.reason-text {
+    font-size: 0.85rem;
+    color: #757575;
+    font-weight: 600;
+    margin: 8px 0 4px 0;
+}
+
+.reason-list {
+    font-size: 0.75rem;
+    color: #999;
+    line-height: 1.4;
+}
+
+.not-recommended-notice {
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.not-recommended-notice h4 {
+    margin: 0 0 10px 0;
+    color: #e65100;
+    font-size: 1rem;
+}
+
+.not-recommended-notice p {
+    margin: 8px 0;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.not-recommended-notice ul {
+    margin: 10px 0;
+    padding-left: 20px;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.not-recommended-notice li {
+    margin: 5px 0;
+}
