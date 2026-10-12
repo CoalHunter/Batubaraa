@@ -501,3 +501,21 @@ header p {
         font-size: 0.72rem;
     }
 }
+/* === TOMBOL CLEAR CACHE === */
+.cache-btn {
+    background: rgba(255,255,255,0.1);
+    color: #ffcccc;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cache-btn:hover {
+    background: rgba(255,0,0,0.2);
+    border-color: #ff4444;
+    color: white;
+}
