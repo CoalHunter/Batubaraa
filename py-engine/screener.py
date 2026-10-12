@@ -4,7 +4,6 @@ import os
 import json
 from datetime import datetime, timezone, timedelta
 
-# WIB = UTC + 7 jam
 WIB = timezone(timedelta(hours=7))
 
 try:
@@ -46,7 +45,6 @@ def get_dividend_history(ticker):
         return []
 
 def analyze_stock(ticker):
-    """Menganalisis 1 saham. Return dict dengan status: recommended/not_recommended/failed"""
     result = {
         "ticker": ticker.replace('.JK', ''),
         "status": "failed",
@@ -60,7 +58,6 @@ def analyze_stock(ticker):
         hist_1y_weekly = stock.history(period="1y", interval="1wk")
         hist_1y_daily = stock.history(period="1y")
         
-        # Cek data cukup
         if len(hist_1y_weekly) < 20:
             result["fail_reason"] = f"Data mingguan tidak cukup ({len(hist_1y_weekly)} minggu)"
             return result
@@ -89,7 +86,7 @@ def analyze_stock(ticker):
 
         # Sanitasi Data
         raw_dy = info.get('dividendYield', 0) or 0
-        dy = (raw_dy * 100) if raw_dy < 1 else raw_dy
+        dy_current = (raw_dy * 100) if raw_dy < 1 else raw_dy  # Yield di harga saat ini
         raw_pbv = info.get('priceToBook', 999) or 999
         pbv = raw_pbv if raw_pbv < 20 else 999
         raw_per = info.get('trailingPE', 999) or 999
@@ -116,33 +113,59 @@ def analyze_stock(ticker):
             if div_history[1]['dps'] > 0 and div_history[0]['dps'] < (div_history[1]['dps'] * 0.70):
                 is_consistent = False
 
-        # Kalkulasi Re-rating
-        target_pbv = 1.2
-        if pbv > 0 and pbv < 20:
-            re_rating_multiplier = target_pbv / pbv
-        else:
-            re_rating_multiplier = 1.0
-        max_upside = min(re_rating_multiplier, 2.0)
-        target_price = round(current_price * max_upside, 2)
-        capital_gain_potential = round((max_upside - 1) * 100, 1)
-        stop_loss = round(current_price * 0.85, 2)
-
         # Area Beli Berbasis 52-Week Low
         low_52_week = hist_1y_daily['Low'].min()
         buy_zone = round(low_52_week * 1.05, 2)
         if buy_zone >= current_price:
             buy_zone = round(current_price * 0.95, 2)
 
+        # ✅ PERBAIKAN 1: Hitung Dividen Yield di Area Beli (bukan harga saat ini)
+        # Ambil DPS rata-rata 3 tahun terakhir untuk proyeksi konservatif
+        avg_dps_3y = 0
+        if div_history and len(div_history) >= 2:
+            # Ambil rata-rata 2 tahun terakhir (lebih relevan)
+            recent_dps = [h['dps'] for h in div_history[:2]]
+            avg_dps_3y = sum(recent_dps) / len(recent_dps)
+        elif div_history:
+            avg_dps_3y = div_history[0]['dps']
+        
+        # Yield di area beli = DPS rata-rata / harga area beli × 100
+        dividend_yield_at_buy = round((avg_dps_3y / buy_zone) * 100, 2) if buy_zone > 0 else 0
+
+        # ✅ PERBAIKAN 2: Handle Capital Gain Negatif
+        # Jika PBV sudah > 1.2x, saham sudah mahal → tidak ada upside re-rating
+        target_pbv = 1.2
+        if pbv > 0 and pbv < 20:
+            if pbv >= target_pbv:
+                # Sudah di atas valuasi wajar → capital gain 0% atau negatif
+                capital_gain_potential = round(((target_pbv / pbv) - 1) * 100, 1)
+                target_price = round(current_price * (target_pbv / pbv), 2)
+                is_overvalued = True
+            else:
+                # Masih di bawah valuasi wajar → ada upside
+                re_rating_multiplier = target_pbv / pbv
+                max_upside = min(re_rating_multiplier, 2.0)
+                capital_gain_potential = round((max_upside - 1) * 100, 1)
+                target_price = round(current_price * max_upside, 2)
+                is_overvalued = False
+        else:
+            capital_gain_potential = 0
+            target_price = current_price
+            is_overvalued = False
+
+        stop_loss = round(current_price * 0.85, 2)
+
         # Cek Filter & Alasan
         reasons = []
         if pbv >= 0.9: reasons.append("PBV ≥ 0.9x")
-        if dy < 5.0: reasons.append("Dividen < 5%")
+        if dividend_yield_at_buy < 5.0: reasons.append(f"Dividen di area beli < 5% ({dividend_yield_at_buy}%)")
         if not (0.20 <= payout_ratio <= 0.85): reasons.append("Payout Ratio tidak ideal")
         if earnings_growth <= -0.10: reasons.append("Laba anjlok")
         if not is_bank and der >= 100: reasons.append("Utang tinggi")
         if not is_in_accumulation_zone: reasons.append("Belum di area akumulasi")
         if not volume_expansion_weekly: reasons.append("Volume belum ekspansi")
         if not is_consistent: reasons.append("Dividen tidak konsisten")
+        if is_overvalued: reasons.append("Sudah di atas valuasi wajar (PBV ≥ 1.2x)")
 
         # Isi data lengkap
         result.update({
@@ -150,7 +173,8 @@ def analyze_stock(ticker):
             "price": round(float(current_price), 2),
             "pbv": round(float(pbv), 2),
             "per": round(float(per), 2),
-            "dividend_yield": round(float(dy), 2),
+            "dividend_yield_current": round(float(dy_current), 2),  # Yield di harga sekarang (untuk referensi)
+            "dividend_yield": dividend_yield_at_buy,  # ✅ Yield di area beli (untuk filter & tampilan)
             "payout_ratio": round(float(payout_ratio) * 100, 1),
             "category": "Deep Value & Re-rating",
             "buy_zone": buy_zone,
@@ -159,8 +183,10 @@ def analyze_stock(ticker):
             "stop_loss": stop_loss,
             "accumulation_signal": bool(is_in_accumulation_zone and volume_expansion_weekly),
             "div_history": div_history if div_history else [],
+            "avg_dps_3y": round(avg_dps_3y, 2),  # Tambahkan info DPS rata-rata
             "exit_rule": f"Jual bertahap saat harga mendekati Rp {target_price:,} (PBV {target_pbv}x) atau jika fundamental rusak.",
-            "reasons": reasons
+            "reasons": reasons,
+            "is_overvalued": is_overvalued
         })
 
         if len(reasons) == 0:
@@ -185,9 +211,9 @@ for ticker in TICKERS:
     stats[data["status"]] += 1
     
     if data["status"] == "recommended":
-        print(f"   ✅ {data['ticker']} LOLOS! Potensi Gain: +{data.get('capital_gain_potential', 0)}%")
+        print(f"   ✅ {data['ticker']} LOLOS! Potensi Gain: +{data.get('capital_gain_potential', 0)}% | Yield di area beli: {data.get('dividend_yield', 0)}%")
     elif data["status"] == "not_recommended":
-        print(f"   ️ {data['ticker']} belum layak: {data.get('fail_reason', '')}")
+        print(f"   ⏸️ {data['ticker']} belum layak: {data.get('fail_reason', '')}")
     else:
         print(f"   ❌ {data['ticker']} GAGAL: {data.get('fail_reason', '')}")
 
