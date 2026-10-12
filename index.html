@@ -11,6 +11,9 @@
         <div class="header-content">
             <h1>📈 WPscanner</h1>
             <p>Wrong Price Scanner: Capital Gain Generators + Dividen Collecting | Big Caps Only</p>
+            <div class="header-actions">
+                <button id="logBtn" class="log-btn">📋 Log Analisis</button>
+            </div>
         </div>
     </header>
 
@@ -20,14 +23,14 @@
             <span class="refresh-hint" id="lastUpdate">Memuat waktu update...</span>
         </div>
 
-        <!-- Search Bar -->
-<div class="search-container">
-    <input type="text" id="searchInput" placeholder="🔍 Cari saham (misal: BBCA, PTBA, Bank...)" autocomplete="off">
-</div>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder=" Cari saham (misal: BBCA, Bank, Tambang...)" autocomplete="off">
+        </div>
 
-<div class="grid" id="stockGrid"></div>
+        <div class="grid" id="stockGrid"></div>
     </main>
 
+    <!-- Modal Detail Saham -->
     <div id="stockModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal()">&times;</span>
@@ -53,6 +56,20 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Log Analisis -->
+    <div id="logModal" class="modal">
+        <div class="modal-content log-modal-content">
+            <span class="close-btn" onclick="closeLogModal()">&times;</span>
+            <div class="log-header">
+                <h2>📋 Log Analisis</h2>
+                <p id="logScanTime">Waktu scan: -</p>
+            </div>
+            <div class="log-stats" id="logStats"></div>
+            <div class="log-list" id="logList"></div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
