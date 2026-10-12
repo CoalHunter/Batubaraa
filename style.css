@@ -467,3 +467,37 @@ header p {
 .log-list::-webkit-scrollbar-thumb:hover {
     background: #999;
 }
+/* === BADGE VALUASI DI KARTU === */
+.valuation-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Tooltip text styling untuk konten glossary yang kaya */
+.tooltip-trigger .tooltip-text {
+    width: 260px;
+    line-height: 1.5;
+}
+
+.tooltip-trigger .tooltip-text b {
+    color: #ffd700;
+    font-size: 0.85rem;
+}
+
+.tooltip-trigger .tooltip-text i {
+    color: #e0e0e0;
+}
+
+@media (max-width: 600px) {
+    .tooltip-trigger .tooltip-text {
+        width: 220px;
+        font-size: 0.72rem;
+    }
+}
